@@ -1,61 +1,74 @@
 # 📊 Marketing Intelligence Platform
 
-> Turning raw e-commerce data into actionable business intelligence using ETL, analytics, machine learning, and automated reporting.
+![CI Status](https://github.com/RuturajM31/marketing-intelligence-platform/actions/workflows/ci.yml/badge.svg)
+
+> A production-style **end-to-end Data Engineering + Analytics + Machine Learning system** that transforms raw e-commerce data into actionable business intelligence.
 
 ---
 
-## 👨‍💻 Project Authors
+## 👨‍💻 Authors
 
 - **Ruturaj Mokashi**
 - **Nathanael Matutis**
 
 ---
 
-## 🎯 Project Overview
+## 🎯 Problem Statement
 
-The **Marketing Intelligence Platform** is an end-to-end data analytics system designed to simulate a real-world e-commerce analytics environment.
+Modern e-commerce companies generate massive amounts of data but struggle to:
 
-It processes raw transactional data and transforms it into:
+- Understand revenue drivers
+- Track customer behavior
+- Detect operational inefficiencies
+- Identify high-value customers
+- Monitor seller performance
 
-- 📈 Business KPIs
-- 🧍 Customer insights
-- 🚚 Delivery performance metrics
-- 🏪 Seller analytics
-- 🤖 Machine learning segmentation
-- 🚨 Anomaly detection
-- 📊 Automated reporting dashboards
+👉 This project solves these problems using a complete analytics pipeline.
 
 ---
 
-## 🏗️ System Architecture
+## 🚀 Solution Overview
 
-    ┌──────────────┐
-    │  Raw Data     │ (Kaggle Dataset)
-    └──────┬───────┘
-           ↓
-    ┌──────────────┐
-    │ ETL Pipeline  │
-    │ extract/transform/load │
-    └──────┬───────┘
-           ↓
-    ┌──────────────┐
-    │ SQLite DB     │
-    └──────┬───────┘
-           ↓
-    ┌──────────────┐
-    │ Analytics     │
-    │ KPI + ML      │
-    └──────┬───────┘
-           ↓
-    ┌──────────────┐
-    │ Reporting     │
-    │ Charts & Viz  │
-    └──────┬───────┘
-           ↓
-    ┌──────────────┐
-    │ CI/CD Pipeline│
-    │ GitHub Actions│
-    └──────────────┘
+This system converts raw transactional data into **business-ready insights** using:
+
+✔ ETL pipeline  
+✔ Data warehouse (SQLite)  
+✔ KPI engine  
+✔ Machine learning models  
+✔ Automated reporting  
+✔ CI/CD pipeline  
+
+---
+
+## 🏗️ Architecture
+
+```text
+        ┌──────────────┐
+        │  Raw Data     │
+        └──────┬───────┘
+               ↓
+        ┌──────────────┐
+        │   ETL Layer   │
+        │ extract/transform/load │
+        └──────┬───────┘
+               ↓
+        ┌──────────────┐
+        │  Data Store   │ (SQLite)
+        └──────┬───────┘
+               ↓
+        ┌──────────────┐
+        │ Analytics     │
+        │ KPI + ML      │
+        └──────┬───────┘
+               ↓
+        ┌──────────────┐
+        │ Reporting     │
+        │ Visualizations│
+        └──────┬───────┘
+               ↓
+        ┌──────────────┐
+        │ CI/CD Pipeline│
+        └──────────────┘
 
 
 ---
