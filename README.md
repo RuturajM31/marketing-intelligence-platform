@@ -1,0 +1,242 @@
+# 📊 Marketing Intelligence Platform
+
+> Turning raw e-commerce data into actionable business intelligence using ETL, analytics, machine learning, and automated reporting.
+
+---
+
+## 👨‍💻 Project Authors
+
+- **Ruturaj Mokashi**
+- **Nathanael Matutis**
+
+---
+
+## 🎯 Project Overview
+
+The **Marketing Intelligence Platform** is an end-to-end data analytics system designed to simulate a real-world e-commerce analytics environment.
+
+It processes raw transactional data and transforms it into:
+
+- 📈 Business KPIs
+- 🧍 Customer insights
+- 🚚 Delivery performance metrics
+- 🏪 Seller analytics
+- 🤖 Machine learning segmentation
+- 🚨 Anomaly detection
+- 📊 Automated reporting dashboards
+
+---
+
+## 🏗️ System Architecture
+
+    ┌──────────────┐
+    │  Raw Data     │ (Kaggle Dataset)
+    └──────┬───────┘
+           ↓
+    ┌──────────────┐
+    │ ETL Pipeline  │
+    │ extract/transform/load │
+    └──────┬───────┘
+           ↓
+    ┌──────────────┐
+    │ SQLite DB     │
+    └──────┬───────┘
+           ↓
+    ┌──────────────┐
+    │ Analytics     │
+    │ KPI + ML      │
+    └──────┬───────┘
+           ↓
+    ┌──────────────┐
+    │ Reporting     │
+    │ Charts & Viz  │
+    └──────┬───────┘
+           ↓
+    ┌──────────────┐
+    │ CI/CD Pipeline│
+    │ GitHub Actions│
+    └──────────────┘
+
+
+---
+
+## ⚙️ How the Project Was Built (Step-by-Step)
+
+### 1️⃣ Data Ingestion (ETL Layer)
+- Dataset downloaded using Kaggle API
+- Raw CSV files stored locally
+- Structured into DataFrames
+
+### 2️⃣ Data Transformation
+- Merged multiple tables:
+  - Orders
+  - Payments
+  - Customers
+  - Products
+  - Sellers
+- Built a unified **analytics-ready dataset**
+
+### 3️⃣ Database Layer
+- Loaded cleaned data into **SQLite**
+- Enabled query-ready analytics environment
+
+### 4️⃣ Analytics Engine
+- KPI calculations (Revenue, Orders, AOV)
+- Time-series revenue trends
+- Operational metrics
+
+### 5️⃣ Machine Learning Layer
+- Customer segmentation using **KMeans**
+- Anomaly detection using **Isolation Forest**
+
+### 6️⃣ Reporting Layer
+- Automated charts using Matplotlib
+- Business dashboards:
+  - Revenue trends
+  - Customer behavior
+  - Delivery delays
+  - Seller performance
+
+### 7️⃣ Testing & CI/CD
+- Unit tests using **pytest**
+- GitHub Actions for CI pipeline
+- Automated validation on every push
+
+---
+
+## 📊 Key Business Insights
+
+### 💰 Revenue Insights
+- Total revenue: **~20.4M**
+- Revenue is highly concentrated in top categories (~70–80%)
+- Strong daily volatility in sales performance
+
+---
+
+### 🧍 Customer Insights
+- ~70–80% customers are one-time buyers
+- Repeat customers contribute significantly higher revenue
+- Clear opportunity for retention optimization
+
+---
+
+### 🚚 Delivery Performance
+- Late delivery rate: **~20–25%**
+- Extreme delays exist in top 1% cases
+- Logistics inconsistency affects customer experience
+
+---
+
+### 🏪 Seller Performance
+- Top sellers contribute disproportionate revenue share
+- High imbalance in seller ecosystem
+- Performance optimization opportunity exists
+
+---
+
+## 🤖 Machine Learning Models
+
+### 🔹 Customer Segmentation (KMeans)
+Segments customers based on:
+- Recency
+- Frequency
+- Monetary value
+
+Output:
+- VIP Customers
+- High Value
+- Mid Value
+- Low Value
+
+---
+
+### 🔹 Anomaly Detection (Isolation Forest)
+Detects:
+- Unusual transactions
+- Extreme order values
+- Outlier customer behavior
+
+---
+
+## 📈 Sample Visualizations
+
+### Revenue Trend
+```
+
+📈 Daily & Monthly Revenue Tracking
+Helps identify seasonality and spikes
+
+
+🧍 Customer segmentation & purchasing behavior
+Identifies high-value vs low-value customers
+
+
+🚚 Delivery delay distribution
+Highlights operational inefficiencies
+
+
+🧪 Testing Strategy
+
+This project includes structured unit testing:
+
+✔ KPI validation
+✔ ETL correctness
+✔ ML model outputs
+✔ Data quality checks
+
+🔄 CI/CD Pipeline
+
+Automated workflow using GitHub Actions:
+
+✔ Install dependencies
+✔ Run unit tests
+✔ Validate code quality
+
+Triggered on:
+
+Push to main
+Pull requests
+
+🛠 Tech Stack
+
+Python
+Pandas
+NumPy
+Scikit-learn
+Matplotlib / Seaborn
+SQLite
+Pytest
+GitHub Actions
+
+📁 Project Structure
+
+src/
+ ├── etl/          # Data ingestion & transformation
+ ├── analytics/    # KPI + ML models
+ ├── reporting/    # Visualizations
+ ├── db/           # Database layer
+tests/             # Unit tests
+main.py            # Pipeline entry point
+
+
+🚀 Future Enhancements
+
+📊 Power BI / Tableau dashboard integration
+⚡ Apache Airflow orchestration
+☁️ Cloud deployment (AWS / GCP)
+📦 Docker containerization
+🔮 Forecasting models (Prophet / ARIMA)
+
+🏁 Final Impact
+
+This project demonstrates:
+
+✔ End-to-end data engineering pipeline
+✔ Real-world analytics system design
+✔ Machine learning integration
+✔ Production-ready testing & CI/CD
+✔ Business intelligence thinking
+
+⭐ Outcome
+
+A production-style Marketing Intelligence Platform that transforms raw data into actionable business decisions.
