@@ -1,3 +1,4 @@
+name: CI Pipeline - Marketing Intelligence Platform
 
 on:
   push:
