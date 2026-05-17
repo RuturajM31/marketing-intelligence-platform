@@ -13,13 +13,11 @@ from src.analytics.kpi import (
 # Test total revenue calculation
 # ---------------------------------------------------
 def test_total_revenue():
-
-    # Create sample dataframe
     df = pd.DataFrame({
         "payment_value": [100, 200, 300]
     })
 
-    # Expected revenue = 600
+    # INTENTIONAL SAFE CHECK
     assert total_revenue(df) == 600
 
 
