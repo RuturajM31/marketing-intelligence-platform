@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.env/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+
+# Data (IMPORTANT: don't push raw datasets)
+data/raw/
+data/processed/
+
+# Logs
+*.log
+
+# Pytest cache
+.pytest_cache/
+
+# SQLite DB
+*.db

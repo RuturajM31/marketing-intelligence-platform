@@ -1,0 +1,8 @@
+pandas
+numpy
+sqlalchemy
+plotly
+scikit-learn
+pytest
+kagglehub
+pytest
