@@ -24,3 +24,6 @@ data/processed/
 
 # SQLite DB
 *.db
+
+#VS Code
+.vscode

@@ -1,3 +1,11 @@
+import logging
+
+# --------------------------------------------
+# Logging setup (professional replacement for print)
+# --------------------------------------------
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 def create_master_dataset(data):
 
     orders = data["orders"]
@@ -25,7 +33,7 @@ def create_master_dataset(data):
     df = df.merge(products, on="product_id", how="left")
 
     # 5. VERIFY AFTER MERGE
-    print("After product merge columns contain product_category_name:",
+    logger.info("After product merge columns contain product_category_name:",
         "product_category_name" in df.columns)
 
     return df

@@ -2,16 +2,84 @@
 
 ![CI Status](https://github.com/RuturajM31/marketing-intelligence-platform/actions/workflows/ci.yml/badge.svg)
 
-> A production-style **end-to-end Data Engineering + Analytics + Machine Learning system** that transforms raw e-commerce data into actionable business intelligence.
+
+An end-to-end **Data Engineering + Analytics + Machine Learning platform** built using Python.
+
+This project simulates a real-world **e-commerce analytics system** using the Olist Brazilian dataset.
 
 ---
-
 ## 👨‍💻 Authors
 
 - **Ruturaj Mokashi**
 - **Nathanael Matutis**
 
 ---
+
+# 🚀 Project Objective
+
+To build a scalable analytics system that:
+- Extracts and processes raw e-commerce data
+- Builds a unified analytical dataset (ETL pipeline)
+- Calculates business KPIs
+- Performs customer segmentation
+- Detects anomalies
+- Generates business insights
+- Validates pipeline using unit tests
+
+---
+
+# The Olist dataset contains multiple relational tables.
+
+| Dataset        | Purpose                   |
+| -------------- | ------------------------- |
+| customers      | Customer information      |
+| orders         | Order lifecycle           |
+| order_items    | Product-level sales       |
+| order_payments | Revenue/payment analysis  |
+| order_reviews  | Customer satisfaction     |
+| products       | Product category analysis |
+| sellers        | Seller performance        |
+| geolocation    | Regional analysis         |
+
+
+---
+## 📁 Project Structure
+
+marketing-intelligence-platform/
+│
+├── src/
+│   ├── config.py
+│   ├── etl/
+│   │   ├── extract.py
+│   │   ├── transform.py
+│   │   ├── load.py
+│   │   ├── download_data.py
+│   │
+│   ├── services/
+│   │   ├── api_client.py
+│   │   ├── data_quality.py
+│   │
+│   ├── analytics/
+│   │   ├── kpi.py
+│   │   ├── anomaly.py
+│   │   ├── segmentation.py
+│   │
+│   ├── db/
+│   │   ├── database.py
+│   │   ├── schema.sql
+│
+├── dashboard/
+│   ├── app.py
+│
+├── data/
+│   ├── raw/
+│   ├── processed/
+│
+├── tests/
+│   ├── test_kpi.py
+│
+├── main.py
+
 
 ## 🎯 Problem Statement
 
@@ -73,36 +141,43 @@ This system converts raw transactional data into **business-ready insights** usi
 
 ---
 
-## ⚙️ How the Project Was Built (Step-by-Step)
+## How the Project Was Built (Step-by-Step)
 
 ### 1️⃣ Data Ingestion (ETL Layer)
+
 - Dataset downloaded using Kaggle API
 - Raw CSV files stored locally
 - Structured into DataFrames
 
 ### 2️⃣ Data Transformation
+
 - Merged multiple tables:
   - Orders
   - Payments
   - Customers
   - Products
   - Sellers
+
 - Built a unified **analytics-ready dataset**
 
 ### 3️⃣ Database Layer
+
 - Loaded cleaned data into **SQLite**
 - Enabled query-ready analytics environment
 
 ### 4️⃣ Analytics Engine
+
 - KPI calculations (Revenue, Orders, AOV)
 - Time-series revenue trends
 - Operational metrics
 
 ### 5️⃣ Machine Learning Layer
+
 - Customer segmentation using **KMeans**
 - Anomaly detection using **Isolation Forest**
 
 ### 6️⃣ Reporting Layer
+
 - Automated charts using Matplotlib
 - Business dashboards:
   - Revenue trends
@@ -111,6 +186,7 @@ This system converts raw transactional data into **business-ready insights** usi
   - Seller performance
 
 ### 7️⃣ Testing & CI/CD
+
 - Unit tests using **pytest**
 - GitHub Actions for CI pipeline
 - Automated validation on every push
@@ -164,6 +240,7 @@ Output:
 ---
 
 ### 🔹 Anomaly Detection (Isolation Forest)
+
 Detects:
 - Unusual transactions
 - Extreme order values
@@ -188,7 +265,7 @@ Identifies high-value vs low-value customers
 Highlights operational inefficiencies
 
 
-🧪 Testing Strategy
+## 🧪 Testing Strategy
 
 This project includes structured unit testing:
 
@@ -197,7 +274,7 @@ This project includes structured unit testing:
 ✔ ML model outputs
 ✔ Data quality checks
 
-🔄 CI/CD Pipeline
+## 🔄 CI/CD Pipeline
 
 Automated workflow using GitHub Actions:
 
@@ -210,7 +287,7 @@ Triggered on:
 Push to main
 Pull requests
 
-🛠 Tech Stack
+## 🛠 Tech Stack
 
 Python
 Pandas
@@ -221,16 +298,7 @@ SQLite
 Pytest
 GitHub Actions
 
-📁 Project Structure
-
-src/
- ├── etl/          # Data ingestion & transformation
- ├── analytics/    # KPI + ML models
- ├── reporting/    # Visualizations
- ├── db/           # Database layer
-tests/             # Unit tests
-main.py            # Pipeline entry point
-
+## 📁 Project Structure
 
 🚀 Future Enhancements
 
@@ -240,7 +308,7 @@ main.py            # Pipeline entry point
 📦 Docker containerization
 🔮 Forecasting models (Prophet / ARIMA)
 
-🏁 Final Impact
+## 🏁 Final Impact
 
 This project demonstrates:
 
@@ -250,6 +318,6 @@ This project demonstrates:
 ✔ Production-ready testing & CI/CD
 ✔ Business intelligence thinking
 
-⭐ Outcome
+## ⭐ Outcome
 
 A production-style Marketing Intelligence Platform that transforms raw data into actionable business decisions.
