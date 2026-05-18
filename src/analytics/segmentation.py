@@ -1,319 +1,154 @@
 # ============================================
-# CUSTOMER SEGMENTATION LAYER
+# CUSTOMER SEGMENTATION
 # ============================================
 
-# This file:
-# - performs RFM analysis
-# - clusters customers using ML
-# - identifies VIP customers
-# - supports targeted marketing
+"""
+PURPOSE
+-------
+Groups customers based on behavior.
 
-import pandas as pd
-import logging
+Used for:
+- targeted marketing
+- customer intelligence
+- loyalty analysis
+- retention strategy
+
+Machine Learning Algorithm:
+KMeans Clustering
+"""
+
+# ============================================
+# IMPORTS
+# ============================================
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-# --------------------------------------------
-# Logging setup
-# --------------------------------------------
+import logging
+
 logger = logging.getLogger(__name__)
+
 logging.basicConfig(level=logging.INFO)
 
 
 # ============================================
-# BUILD RFM TABLE
-# ============================================
-
-def build_rfm_table(df):
-
-    """
-    Creates customer-level RFM metrics
-
-    R = Recency
-    F = Frequency
-    M = Monetary
-    """
-
-    logger.info(
-        "Building RFM customer table..."
-    )
-
-    rfm_df = df.copy()
-
-    # ----------------------------------------
-    # Convert order timestamp
-    # ----------------------------------------
-    rfm_df["order_purchase_timestamp"] = (
-        pd.to_datetime(
-            rfm_df["order_purchase_timestamp"],
-            errors="coerce"
-        )
-    )
-
-    # ----------------------------------------
-    # Snapshot date
-    # latest date in dataset
-    # ----------------------------------------
-    snapshot_date = (
-        rfm_df["order_purchase_timestamp"]
-        .max()
-    )
-
-    # ----------------------------------------
-    # Build RFM metrics
-    # ----------------------------------------
-    rfm = rfm_df.groupby("customer_id").agg({
-
-        # Recency
-        "order_purchase_timestamp":
-            lambda x: (
-                snapshot_date - x.max()
-            ).days,
-
-        # Frequency
-        "order_id":
-            "nunique",
-
-        # Monetary
-        "payment_value":
-            "sum"
-
-    })
-
-    # ----------------------------------------
-    # Rename columns
-    # ----------------------------------------
-    rfm.columns = [
-
-        "Recency",
-        "Frequency",
-        "Monetary"
-
-    ]
-
-    logger.info(
-        f"RFM table created "
-        f"for {len(rfm)} customers"
-    )
-
-    return rfm
-
-
-# ============================================
-# KMEANS CUSTOMER CLUSTERING
+# CUSTOMER SEGMENTATION FUNCTION
 # ============================================
 
 def customer_segmentation(df):
-
     """
-    Segments customers using:
+    Customer segmentation using KMeans clustering.
 
-    - Recency
-    - Frequency
-    - Monetary
+    FEATURES:
+    ---------
+    1. Total spending
+    2. Purchase frequency
 
-    Machine Learning:
-    - StandardScaler
-    - KMeans Clustering
+    INPUT:
+    ------
+    dataframe with:
+    - customer_id
+    - payment_value
+    - order_id
+
+    OUTPUT:
+    -------
+    customer-level dataframe
+    with segment labels
     """
 
     logger.info(
         "Starting customer segmentation..."
     )
 
-    # ----------------------------------------
-    # Build RFM table
-    # ----------------------------------------
-    rfm = build_rfm_table(df)
+    # ============================================
+    # CUSTOMER AGGREGATION
+    # ============================================
 
-    # ----------------------------------------
-    # Scale numerical features
-    # Important for clustering quality
-    # ----------------------------------------
+    """
+    We convert transaction-level data
+    into customer-level behavior.
+
+    Example:
+
+    Customer A:
+    spent = 1000
+    orders = 5
+    """
+
+    customer = df.groupby(
+        "customer_id"
+    ).agg({
+
+        # Total spend
+        "payment_value": "sum",
+
+        # Unique orders
+        "order_id": "nunique"
+
+    })
+
+    # ============================================
+    # FEATURE SCALING
+    # ============================================
+
+    """
+    Scaling ensures:
+    spending and orders
+    have equal importance.
+    """
+
     scaler = StandardScaler()
 
-    scaled = scaler.fit_transform(
+    scaled = scaler.fit_transform(customer)
 
-        rfm[[
-            "Recency",
-            "Frequency",
-            "Monetary"
-        ]]
+    # ============================================
+    # SAFE CLUSTER LOGIC
+    # ============================================
 
-    )
+    """
+    Prevents this error:
 
-    # ----------------------------------------
-    # Safe cluster count
-    # prevents ML crash
-    # ----------------------------------------
-    k = min(4, len(rfm))
+    n_samples < n_clusters
 
-    logger.info(
-        f"Using {k} customer clusters"
-    )
+    Example:
+    3 customers cannot create 4 clusters.
+    """
 
-    # ----------------------------------------
-    # Train KMeans model
-    # ----------------------------------------
+    k = min(4, len(customer))
+
+    # Extra safety
+    if k < 1:
+        k = 1
+
+    # ============================================
+    # KMEANS MODEL
+    # ============================================
+
+    """
+    n_clusters:
+    number of customer groups
+
+    random_state:
+    ensures reproducible results
+
+    n_init:
+    improves clustering stability
+    """
+
     model = KMeans(
-
         n_clusters=k,
         random_state=42,
         n_init=10
-
     )
 
-    # ----------------------------------------
-    # Predict customer segments
-    # ----------------------------------------
-    rfm["segment"] = (
-
-        model.fit_predict(scaled)
-
+    # Create segment labels
+    customer["segment"] = model.fit_predict(
+        scaled
     )
 
     logger.info(
         "Customer segmentation completed"
     )
 
-    return rfm
-
-
-# ============================================
-# SEGMENT LABELING
-# ============================================
-
-def label_customer_segments(rfm):
-
-    """
-    Adds business-friendly labels
-    to ML-generated clusters
-    """
-
-    logger.info(
-        "Labelling customer segments..."
-    )
-
-    # ----------------------------------------
-    # Average spending by segment
-    # ----------------------------------------
-    segment_summary = rfm.groupby(
-        "segment"
-    )["Monetary"].mean()
-
-    # ----------------------------------------
-    # Sort segments by spending
-    # ----------------------------------------
-    ranked_segments = (
-        segment_summary
-        .sort_values()
-        .index
-        .tolist()
-    )
-
-    # ----------------------------------------
-    # Business labels
-    # ----------------------------------------
-    labels = {
-
-        ranked_segments[0]:
-            "Low Value",
-
-        ranked_segments[1]:
-            "Mid Value",
-
-        ranked_segments[2]:
-            "High Value",
-
-        ranked_segments[3]:
-            "VIP"
-
-    }
-
-    # ----------------------------------------
-    # Apply labels
-    # ----------------------------------------
-    rfm["segment_label"] = (
-        rfm["segment"].map(labels)
-    )
-
-    logger.info(
-        "Customer labels assigned"
-    )
-
-    return rfm
-
-
-# ============================================
-# SEGMENT SUMMARY
-# ============================================
-
-def segment_summary(rfm):
-
-    """
-    Creates business summary
-    for each customer segment
-    """
-
-    logger.info(
-        "Generating segment summary..."
-    )
-
-    summary = rfm.groupby(
-        "segment_label"
-    ).agg({
-
-        "Recency": "mean",
-        "Frequency": "mean",
-        "Monetary": "mean"
-
-    }).round(2)
-
-    logger.info(
-        "Segment summary completed"
-    )
-
-    return summary
-
-
-# ============================================
-# MASTER PIPELINE
-# ============================================
-
-def run_customer_segmentation(df):
-
-    """
-    Complete segmentation pipeline
-    """
-
-    logger.info(
-        "Running full segmentation pipeline..."
-    )
-
-    # ----------------------------------------
-    # ML segmentation
-    # ----------------------------------------
-    rfm = customer_segmentation(df)
-
-    # ----------------------------------------
-    # Add business labels
-    # ----------------------------------------
-    rfm = label_customer_segments(rfm)
-
-    # ----------------------------------------
-    # Segment business summary
-    # ----------------------------------------
-    summary = segment_summary(rfm)
-
-    logger.info(
-        "Customer segmentation pipeline completed"
-    )
-
-    return {
-
-        "rfm_table": rfm,
-
-        "segment_summary": summary
-
-    }
+    return customer
