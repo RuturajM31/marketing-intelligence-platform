@@ -44,42 +44,58 @@ To build a scalable analytics system that:
 
 ---
 
+
+
+
+
+
+
+
 ## 📁 Project Structure
 
 marketing-intelligence-platform/
 │
 ├── src/
-│   ├── config.py
-│   ├── etl/
-│   │   ├── extract.py
-│   │   ├── transform.py
-│   │   ├── load.py
-│   │   ├── download_data.py
-│   │
-│   ├── services/
-│   │   ├── api_client.py
-│   │   ├── data_quality.py
-│   │
-│   ├── analytics/
-│   │   ├── kpi.py
-│   │   ├── anomaly.py
-│   │   ├── segmentation.py
-│   │
-│   ├── db/
-│   │   ├── database.py
-│   │   ├── schema.sql
+│ ├── config.py
+│ │
+│ ├── etl/
+│ │ ├── extract.py
+│ │ ├── transform.py
+│ │ ├── load.py
+│ │ ├── download_data.py
+│ │
+│ ├── services/
+│ │ ├── api_client.py
+│ │ ├── data_quality.py
+│ │
+│ ├── analytics/
+│ │ ├── kpi.py
+│ │ ├── anomaly.py
+│ │ ├── segmentation.py
+│ │
+│ ├── db/
+│ │ ├── database.py
+│ │ ├── schema.sql
 │
 ├── dashboard/
-│   ├── app.py
+│ ├── app.py
 │
 ├── data/
-│   ├── raw/
-│   ├── processed/
+│ ├── raw/
+│ ├── processed/
 │
 ├── tests/
-│   ├── test_kpi.py
+│ ├── test_kpi.py
 │
 ├── main.py
+
+
+
+
+
+
+
+
 
 ---
 
