@@ -1,10 +1,16 @@
 # Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+*$py.class
 
-# Virtual environment
+# Virtual environments
 venv/
+venv_broken/
+dashboard-venv/
 .env/
+.venv/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
@@ -12,7 +18,7 @@ venv/
 # OS files
 .DS_Store
 
-# Data (IMPORTANT: don't push raw datasets)
+# Data - do not push raw/generated datasets
 data/raw/
 data/processed/
 
@@ -25,5 +31,5 @@ data/processed/
 # SQLite DB
 *.db
 
-#VS Code
-.vscode
+# VS Code
+.vscode/
