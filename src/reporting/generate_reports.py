@@ -17,6 +17,7 @@ def generate_report(df):
     kpis = calculate_kpis(df)
 
     # SAVE KPIs TO FILE (real business output)
+    
     pd.DataFrame([kpis]).to_csv(
         "data/processed/kpis.csv",
         index=False
