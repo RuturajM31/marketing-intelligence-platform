@@ -28,6 +28,7 @@ def create_master_dataset(data):
     # ----------------------------------------
     # STEP 1: Load individual datasets
     # ----------------------------------------
+    
     orders = data["orders"]
     payments = data["payments"]
     customers = data["customers"]
@@ -37,6 +38,7 @@ def create_master_dataset(data):
     # ----------------------------------------
     # STEP 2: Check columns before merge
     # ----------------------------------------
+    
     logger.info(f"Products columns: {products.columns}")
     logger.info(f"Items columns: {items.columns}")
 
@@ -44,6 +46,7 @@ def create_master_dataset(data):
     # STEP 3: Merge orders + payments
     # Creates financial transaction layer
     # ----------------------------------------
+    
     df = orders.merge(
         payments,
         on="order_id",
@@ -54,6 +57,7 @@ def create_master_dataset(data):
     # STEP 4: Merge customer information
     # Adds customer demographics/location
     # ----------------------------------------
+    
     df = df.merge(
         customers,
         on="customer_id",
@@ -64,6 +68,7 @@ def create_master_dataset(data):
     # STEP 5: Merge order items
     # Adds product_id and seller_id
     # ----------------------------------------
+    
     df = df.merge(
         items,
         on="order_id",
@@ -73,6 +78,7 @@ def create_master_dataset(data):
     # ----------------------------------------
     # STEP 6: Verify product_id exists
     # ----------------------------------------
+    
     logger.info(
         f"Product ID exists before product merge: "
         f"{'product_id' in df.columns}"
@@ -82,6 +88,7 @@ def create_master_dataset(data):
     # STEP 7: Merge product information
     # Adds product category and attributes
     # ----------------------------------------
+    
     df = df.merge(
         products,
         on="product_id",
@@ -91,6 +98,7 @@ def create_master_dataset(data):
     # ----------------------------------------
     # STEP 8: Verify successful product merge
     # ----------------------------------------
+    
     logger.info(
         f"After product merge, product_category_name exists: "
         f"{'product_category_name' in df.columns}"
@@ -100,6 +108,7 @@ def create_master_dataset(data):
     # STEP 9: Convert date columns
     # VERY IMPORTANT for analytics
     # ----------------------------------------
+    
     date_columns = [
         "order_purchase_timestamp",
         "order_approved_at",
@@ -121,6 +130,7 @@ def create_master_dataset(data):
     # ----------------------------------------
     # STEP 10: Remove duplicate rows
     # ----------------------------------------
+    
     before = len(df)
 
     df = df.drop_duplicates()
@@ -134,6 +144,7 @@ def create_master_dataset(data):
     # ----------------------------------------
     # STEP 11: Final safety check
     # ----------------------------------------
+    
     assert not df.empty, "Final dataframe is empty!"
 
     logger.info(

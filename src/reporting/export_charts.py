@@ -347,6 +347,9 @@ def create_charts(df):
     plt.close()
 
     logger.info("Correlation heatmap created")
+    
+    
+    
 
     # ========================================
     # COMPLETED
