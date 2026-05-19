@@ -1,13 +1,23 @@
 # 📊 Marketing Intelligence Platform
 
-![CI Status](https://github.com/RuturajM31/marketing-intelligence-platform/actions/workflows/ci.yml/badge.svg)
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Pandas](https://img.shields.io/badge/Pandas-ETL-150458?style=for-the-badge&logo=pandas&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Analytics%20Database-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-BI%20Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Pytest](https://img.shields.io/badge/Pytest-Tested-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white)
+<p align="center">
+  <img src="https://github.com/RuturajM31/marketing-intelligence-platform/actions/workflows/ci.yml/badge.svg" alt="CI Status">
+</p>
 
-An end-to-end **Data Engineering + Analytics + Machine Learning + BI Dashboard** project built with Python using the **Brazilian E-Commerce Public Dataset by Olist**.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Pandas-ETL-150458?style=for-the-badge&logo=pandas&logoColor=white" alt="Pandas">
+  <img src="https://img.shields.io/badge/SQLite-Analytics%20DB-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Streamlit-BI%20Dashboard-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit">
+  <img src="https://img.shields.io/badge/Pytest-Tested-0A9EDC?style=for-the-badge&logo=pytest&logoColor=white" alt="Pytest">
+</p>
+
+<p align="center">
+  <b>End-to-end Data Engineering + Analytics + Machine Learning + BI Dashboard project using the Brazilian E-Commerce Public Dataset by Olist.</b>
+</p>
 
 This project simulates a real-world e-commerce analytics platform that transforms raw transactional data into a clean analytical dataset, validates data quality, calculates business KPIs, applies machine learning, stores curated data in SQLite, generates reports, and exposes insights through an interactive Streamlit dashboard.
 
