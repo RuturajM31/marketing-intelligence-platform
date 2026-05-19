@@ -64,67 +64,61 @@ st.set_page_config(
 
 
 # ============================================================
-# LIGHT PROFESSIONAL CSS
+# PLOTLY CONFIG
+# ============================================================
+
+PLOTLY_CONFIG = {
+    "displayModeBar": False,
+    "responsive": True
+}
+
+
+# ============================================================
+# PROFESSIONAL DASHBOARD CSS
 # ============================================================
 
 st.markdown(
     """
     <style>
+        /* Main app container */
         .block-container {
-            padding-top: 2rem;
+            padding-top: 1.4rem;
             padding-bottom: 2rem;
             max-width: 1450px;
         }
 
+        /* Header */
         .main-header {
-            background: linear-gradient(135deg, #ffffff 0%, #eef4ff 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5ff 100%);
             border: 1px solid #e5e7eb;
-            border-radius: 22px;
-            padding: 1.8rem 2rem;
-            margin-bottom: 1.5rem;
+            border-radius: 20px;
+            padding: 1.4rem 1.7rem;
+            margin-bottom: 1.4rem;
             box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
         }
 
         .main-title {
-            font-size: 2.3rem;
+            font-size: 2rem;
             font-weight: 800;
             color: #0f172a;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.2rem;
         }
 
         .main-subtitle {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #64748b;
             margin-bottom: 0;
         }
 
         .section-title {
-            font-size: 1.35rem;
+            font-size: 1.25rem;
             font-weight: 750;
             color: #0f172a;
-            margin-top: 1rem;
-            margin-bottom: 0.8rem;
+            margin-top: 0.4rem;
+            margin-bottom: 0.9rem;
         }
 
-        .info-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 18px;
-            padding: 1rem 1.2rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
-        }
-
-        .grain-card {
-            background: #eef4ff;
-            border-left: 5px solid #2563eb;
-            border-radius: 16px;
-            padding: 1rem 1.2rem;
-            margin: 1rem 0 1.2rem 0;
-            color: #1e293b;
-            font-size: 0.95rem;
-        }
-
+        /* KPI cards */
         div[data-testid="stMetric"] {
             background: white;
             border: 1px solid #e5e7eb;
@@ -135,7 +129,7 @@ st.markdown(
 
         div[data-testid="stMetricLabel"] {
             color: #64748b;
-            font-weight: 600;
+            font-weight: 650;
         }
 
         div[data-testid="stMetricValue"] {
@@ -144,16 +138,66 @@ st.markdown(
             font-weight: 800;
         }
 
+        /* Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #ffffff;
             border-right: 1px solid #e5e7eb;
         }
 
-        .sidebar-note {
-            font-size: 0.82rem;
-            color: #64748b;
-            margin-top: -0.4rem;
-            margin-bottom: 0.7rem;
+        section[data-testid="stSidebar"] h1 {
+            font-size: 1.5rem;
+            color: #0f172a;
+        }
+
+        section[data-testid="stSidebar"] label {
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        section[data-testid="stSidebar"] .stMetric {
+            background: #ffffff;
+        }
+
+        /* Data grain explanation */
+        .grain-card {
+            background: #eef4ff;
+            border-left: 5px solid #2563eb;
+            border-radius: 16px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0 1.2rem 0;
+            color: #1e293b;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+        }
+
+        /* Plotly chart cards */
+        div[data-testid="stPlotlyChart"] {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 1rem;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+            margin-bottom: 1.2rem;
+        }
+
+        /* Tabs */
+        button[data-baseweb="tab"] {
+            font-weight: 600;
+            border-radius: 10px 10px 0 0;
+        }
+
+        /* Inputs */
+        div[data-testid="stDateInput"] input {
+            background-color: #f8fafc;
+            border-radius: 12px;
+        }
+
+        div[data-testid="stSelectbox"] {
+            margin-bottom: 0.8rem;
+        }
+
+        div[data-testid="stMultiSelect"] {
+            margin-bottom: 0.8rem;
         }
 
         hr {
@@ -189,7 +233,7 @@ def format_currency(value: float) -> str:
 
 def format_number(value: float) -> str:
     """
-    Formats number values.
+    Formats count values.
     """
 
     if value is None or pd.isna(value):
@@ -211,13 +255,13 @@ def format_percentage(value: float) -> str:
 
 def apply_chart_layout(fig, height: int = 430):
     """
-    Applies a consistent Plotly BI-style layout.
+    Applies consistent BI-style layout to Plotly charts.
     """
 
     fig.update_layout(
         template="plotly_white",
         height=height,
-        margin=dict(l=20, r=20, t=70, b=30),
+        margin=dict(l=20, r=20, t=70, b=35),
         title=dict(
             x=0.02,
             xanchor="left",
@@ -258,6 +302,18 @@ def apply_chart_layout(fig, height: int = 430):
     )
 
     return fig
+
+
+def show_chart(fig):
+    """
+    Displays Plotly chart with consistent config.
+    """
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=PLOTLY_CONFIG
+    )
 
 
 # ============================================================
@@ -310,27 +366,21 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Applies filters from sidebar.
+    Applies dashboard filters.
 
-    Professional UI decision:
-    -------------------------
-    Filters are empty by default.
-    Empty means "All".
-
-    This avoids the huge red chip mess you saw earlier.
+    Empty dropdown selections mean "include all values".
+    This keeps the sidebar clean and avoids many selected chips.
     """
 
     st.sidebar.title("Filters")
 
-    filtered = df.copy()
-
     st.sidebar.caption(
-        "Leave dropdowns empty to include all values."
+        "Use filters to narrow the dashboard. Empty selections include all values."
     )
 
-    # --------------------------------------------------------
+    filtered = df.copy()
+
     # Date filter
-    # --------------------------------------------------------
     if "order_purchase_timestamp" in filtered.columns:
         valid_dates = filtered["order_purchase_timestamp"].dropna()
 
@@ -355,9 +405,7 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     st.sidebar.divider()
 
-    # --------------------------------------------------------
     # Order status filter
-    # --------------------------------------------------------
     if "order_status" in filtered.columns:
         statuses = sorted(
             filtered["order_status"].dropna().unique()
@@ -375,9 +423,7 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
                 filtered["order_status"].isin(selected_statuses)
             ]
 
-    # --------------------------------------------------------
     # Customer state filter
-    # --------------------------------------------------------
     if "customer_state" in filtered.columns:
         states = sorted(
             filtered["customer_state"].dropna().unique()
@@ -395,9 +441,7 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
                 filtered["customer_state"].isin(selected_states)
             ]
 
-    # --------------------------------------------------------
     # Product category filter
-    # --------------------------------------------------------
     category_column = None
 
     if "main_product_category_english" in filtered.columns:
@@ -558,7 +602,7 @@ def chart_monthly_revenue(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=460)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_revenue_vs_orders(df: pd.DataFrame):
@@ -629,7 +673,7 @@ def chart_revenue_vs_orders(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=460)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_top_categories(df: pd.DataFrame):
@@ -683,7 +727,7 @@ def chart_top_categories(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=560)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_order_status(df: pd.DataFrame):
@@ -725,7 +769,7 @@ def chart_order_status(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=430)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_payment_methods(df: pd.DataFrame):
@@ -775,7 +819,7 @@ def chart_payment_methods(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=430)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_customer_frequency(df: pd.DataFrame):
@@ -812,7 +856,7 @@ def chart_customer_frequency(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=430)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_customer_states(df: pd.DataFrame):
@@ -859,7 +903,7 @@ def chart_customer_states(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=470)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_delivery_delay(df: pd.DataFrame):
@@ -900,7 +944,7 @@ def chart_delivery_delay(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=430)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 def chart_top_sellers(df: pd.DataFrame):
@@ -954,7 +998,7 @@ def chart_top_sellers(df: pd.DataFrame):
 
     fig = apply_chart_layout(fig, height=560)
 
-    st.plotly_chart(fig, use_container_width=True)
+    show_chart(fig)
 
 
 # ============================================================
