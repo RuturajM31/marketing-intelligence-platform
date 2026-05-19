@@ -1,93 +1,74 @@
-# ============================================
-# EXTRACT LAYER (ETL - STEP 2)
-# ============================================
-
-# This file:
-# - reads raw CSV files
-# - converts them into pandas DataFrames
-# - prepares data for transformation layer
-
-import pandas as pd
-from src.config import RAW_DATA_PATH
 import logging
 
-# --------------------------------------------
-# Logging setup
-# --------------------------------------------
+import pandas as pd
+
+from src.config import RAW_DATA_PATH
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
-# --------------------------------------------
-# HELPER FUNCTION: Load single CSV file
-# --------------------------------------------
-def load_csv(file_name):
+REQUIRED_FILES = {
+    "customers": "olist_customers_dataset.csv",
+    "orders": "olist_orders_dataset.csv",
+    "payments": "olist_order_payments_dataset.csv",
+    "items": "olist_order_items_dataset.csv",
+    "products": "olist_products_dataset.csv",
+}
+
+OPTIONAL_FILES = {
+    "sellers": "olist_sellers_dataset.csv",
+    "reviews": "olist_order_reviews_dataset.csv",
+    "geolocation": "olist_geolocation_dataset.csv",
+    "category_translation": "product_category_name_translation.csv",
+}
+
+
+def load_csv(file_name: str) -> pd.DataFrame:
     """
-    Reads CSV file from data/raw folder
-    and returns pandas dataframe
+    Loads one CSV file from data/raw.
     """
 
-    try:
+    file_path = RAW_DATA_PATH / file_name
+
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"File not found: {file_path}"
+        )
+
+    logger.info(f"Loading file: {file_name}")
+
+    df = pd.read_csv(file_path)
+
+    logger.info(f"Loaded {file_name} with shape {df.shape}")
+
+    return df
+
+
+def extract_all_data() -> dict[str, pd.DataFrame]:
+    """
+    Loads all required and optional Olist CSV files.
+    """
+
+    logger.info("Starting data extraction...")
+
+    data = {}
+
+    for key, file_name in REQUIRED_FILES.items():
+        data[key] = load_csv(file_name)
+
+    for key, file_name in OPTIONAL_FILES.items():
         file_path = RAW_DATA_PATH / file_name
 
-        logger.info(f"Loading file: {file_name}")
+        if file_path.exists():
+            data[key] = pd.read_csv(file_path)
+            logger.info(
+                f"Loaded optional file {file_name} with shape {data[key].shape}"
+            )
+        else:
+            logger.warning(f"Optional file not found: {file_name}")
 
-        # Read CSV file
-        df = pd.read_csv(file_path)
-
-        logger.info(
-            f"Loaded {file_name} successfully | Shape: {df.shape}"
-        )
-
-        return df
-
-    except FileNotFoundError:
-        logger.error(f"File not found: {file_name}")
-        raise
-
-    except Exception as e:
-        logger.error(
-            f"Error while reading {file_name}: {str(e)}"
-        )
-        raise
-
-
-# --------------------------------------------
-# MAIN FUNCTION: Extract all datasets
-# --------------------------------------------
-def extract_all_data():
-
-    logger.info("Starting data extraction process...")
-
-    # Dictionary storing all datasets
-    data = {
-
-        # Customer information
-        "customers": load_csv(
-            "olist_customers_dataset.csv"
-        ),
-
-        # Order transaction data
-        "orders": load_csv(
-            "olist_orders_dataset.csv"
-        ),
-
-        # Payment details
-        "payments": load_csv(
-            "olist_order_payments_dataset.csv"
-        ),
-
-        # Product order items
-        "items": load_csv(
-            "olist_order_items_dataset.csv"
-        ),
-
-        # Product metadata
-        "products": load_csv(
-            "olist_products_dataset.csv"
-        ),
-    }
-
-    logger.info("All datasets extracted successfully")
+    logger.info("Data extraction completed.")
 
     return data
+
+# This loads raw CSV files into pandas DataFrames.

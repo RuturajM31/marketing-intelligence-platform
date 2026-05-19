@@ -1,70 +1,54 @@
-# ============================================
-# DOWNLOAD DATA LAYER (ETL - STEP 1)
-# ============================================
-
-# This module downloads dataset from Kaggle
-# and stores it inside your local project folder
-
-import kagglehub
+import logging
 import shutil
 from pathlib import Path
-import logging
 
-# --------------------------------------------
-# Logging setup (professional replacement for print)
-# --------------------------------------------
+import kagglehub
+
+from src.config import RAW_DATA_PATH
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
-# --------------------------------------------
-# MAIN FUNCTION: Download dataset
-# --------------------------------------------
-def download_dataset():
+def download_dataset(force: bool = False) -> None:
     """
-    Downloads Kaggle dataset and moves CSV files
-    into local data/raw directory
+    Downloads the Olist dataset from KaggleHub and copies CSV files
+    into data/raw.
+
+    If files already exist and force=False, download is skipped.
     """
 
-    try:
-        logger.info("Starting dataset download...")
+    RAW_DATA_PATH.mkdir(parents=True, exist_ok=True)
 
-        # Step 1: Download dataset from Kaggle
-        path = kagglehub.dataset_download(
-            "olistbr/brazilian-ecommerce"
+    existing_csvs = list(RAW_DATA_PATH.glob("*.csv"))
+
+    if existing_csvs and not force:
+        logger.info("Raw CSV files already exist. Skipping download.")
+        return
+
+    logger.info("Downloading Olist dataset from KaggleHub...")
+
+    kaggle_path = kagglehub.dataset_download(
+        "olistbr/brazilian-ecommerce"
+    )
+
+    source_path = Path(kaggle_path)
+    csv_files = list(source_path.glob("*.csv"))
+
+    if not csv_files:
+        raise FileNotFoundError(
+            f"No CSV files found in downloaded path: {source_path}"
         )
 
-        logger.info(f"Dataset downloaded at: {path}")
+    for file in csv_files:
+        destination = RAW_DATA_PATH / file.name
+        shutil.copy(file, destination)
+        logger.info(f"Copied {file.name} to {destination}")
 
-        # Step 2: Convert to Path object (clean file handling)
-        src_path = Path(path)
-
-        # Step 3: Define destination folder in project
-        dest_path = Path("data/raw")
-
-        # Step 4: Create folder if it doesn't exist
-        dest_path.mkdir(parents=True, exist_ok=True)
-
-        # Step 5: Copy all CSV files into project folder
-        csv_files = list(src_path.glob("*.csv"))
-
-        if not csv_files:
-            logger.warning("No CSV files found in dataset!")
-
-        for file in csv_files:
-            shutil.copy(file, dest_path)
-            logger.info(f"Copied file: {file.name}")
-
-        logger.info("All files successfully moved to data/raw")
-
-    except Exception as e:
-        # If anything fails, show clean error message
-        logger.error(f"Error while downloading dataset: {str(e)}")
-        raise
+    logger.info("Dataset download completed.")
 
 
-# --------------------------------------------
-# Allows file to run independently
-# --------------------------------------------
 if __name__ == "__main__":
-    download_dataset()
+    logging.basicConfig(level=logging.INFO)
+    download_dataset(force=True)
+    
+    # This downloads the dataset only if needed. force=True downloads again.

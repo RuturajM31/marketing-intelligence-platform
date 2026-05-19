@@ -1,61 +1,83 @@
-## Test Transformation
-
 import pandas as pd
 
 from src.etl.transform import create_master_dataset
 
 
-# ---------------------------------------------------
-# Test ETL merge logic
-# ---------------------------------------------------
-def test_create_master_dataset():
+def test_create_master_dataset_prevents_data_explosion():
+    """
+    One order has:
+    - 2 payment rows
+    - 3 item rows
 
-    # Mock orders table
+    Wrong raw merge would create:
+    2 x 3 = 6 rows
+
+    Correct transformation returns:
+    1 row per order_id
+    """
+
     orders = pd.DataFrame({
-        "order_id": [1],
-        "customer_id": ["C1"]
+        "order_id": ["O1"],
+        "customer_id": ["C1"],
+        "order_status": ["delivered"],
+        "order_purchase_timestamp": ["2023-01-01"],
+        "order_approved_at": ["2023-01-01"],
+        "order_delivered_carrier_date": ["2023-01-02"],
+        "order_delivered_customer_date": ["2023-01-05"],
+        "order_estimated_delivery_date": ["2023-01-06"]
     })
 
-    # Mock payments table
-    payments = pd.DataFrame({
-        "order_id": [1],
-        "payment_value": [500]
-    })
-
-    # Mock customers table
     customers = pd.DataFrame({
         "customer_id": ["C1"],
-        "customer_city": ["Munich"]
+        "customer_unique_id": ["U1"],
+        "customer_zip_code_prefix": [12345],
+        "customer_city": ["Munich"],
+        "customer_state": ["BY"]
     })
 
-    # Mock items table
+    payments = pd.DataFrame({
+        "order_id": ["O1", "O1"],
+        "payment_sequential": [1, 2],
+        "payment_type": ["credit_card", "voucher"],
+        "payment_installments": [1, 1],
+        "payment_value": [100, 20]
+    })
+
     items = pd.DataFrame({
-        "order_id": [1],
-        "product_id": ["P1"]
+        "order_id": ["O1", "O1", "O1"],
+        "order_item_id": [1, 2, 3],
+        "product_id": ["P1", "P2", "P3"],
+        "seller_id": ["S1", "S1", "S2"],
+        "shipping_limit_date": [
+            "2023-01-02",
+            "2023-01-02",
+            "2023-01-02"
+        ],
+        "price": [50, 40, 30],
+        "freight_value": [5, 4, 3]
     })
 
-    # Mock products table
     products = pd.DataFrame({
-        "product_id": ["P1"],
-        "product_category_name": ["electronics"]
+        "product_id": ["P1", "P2", "P3"],
+        "product_category_name": [
+            "electronics",
+            "electronics",
+            "books"
+        ]
     })
 
-    # Create fake ETL dictionary
     data = {
         "orders": orders,
-        "payments": payments,
         "customers": customers,
+        "payments": payments,
         "items": items,
         "products": products
     }
 
-    # Run transformation
-    df = create_master_dataset(data)
+    result = create_master_dataset(data)
 
-    # Validate merged columns exist
-    assert "payment_value" in df.columns
-    assert "customer_city" in df.columns
-    assert "product_category_name" in df.columns
-
-    # Validate row count
-    assert len(df) == 1
+    assert len(result) == 1
+    assert result["order_id"].nunique() == 1
+    assert result["payment_value"].iloc[0] == 120
+    assert result["item_count"].iloc[0] == 3
+    assert result["total_item_price"].iloc[0] == 120

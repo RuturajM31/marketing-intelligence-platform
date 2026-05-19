@@ -1,154 +1,99 @@
-# ============================================
-# CUSTOMER SEGMENTATION
-# ============================================
+import logging
 
-"""
-PURPOSE
--------
-Groups customers based on behavior.
-
-Used for:
-- targeted marketing
-- customer intelligence
-- loyalty analysis
-- retention strategy
-
-Machine Learning Algorithm:
-KMeans Clustering
-"""
-
-# ============================================
-# IMPORTS
-# ============================================
-
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 
-import logging
-
 logger = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.INFO)
 
-
-# ============================================
-# CUSTOMER SEGMENTATION FUNCTION
-# ============================================
-
-def customer_segmentation(df):
+def customer_segmentation(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Customer segmentation using KMeans clustering.
+    Customer segmentation using RFM-style features.
 
-    FEATURES:
-    ---------
-    1. Total spending
-    2. Purchase frequency
-
-    INPUT:
-    ------
-    dataframe with:
-    - customer_id
-    - payment_value
-    - order_id
-
-    OUTPUT:
-    -------
-    customer-level dataframe
-    with segment labels
+    Uses:
+        customer_unique_id
+        recency
+        frequency
+        monetary value
     """
 
-    logger.info(
-        "Starting customer segmentation..."
+    required_columns = [
+        "customer_unique_id",
+        "order_id",
+        "payment_value",
+        "order_purchase_timestamp"
+    ]
+
+    missing_columns = [
+        column for column in required_columns
+        if column not in df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"Missing required columns for segmentation: {missing_columns}"
+        )
+
+    temp = df.copy()
+
+    temp["order_purchase_timestamp"] = pd.to_datetime(
+        temp["order_purchase_timestamp"],
+        errors="coerce"
     )
 
-    # ============================================
-    # CUSTOMER AGGREGATION
-    # ============================================
+    temp = temp.dropna(
+        subset=["customer_unique_id", "order_purchase_timestamp"]
+    )
 
-    """
-    We convert transaction-level data
-    into customer-level behavior.
+    if temp.empty:
+        return pd.DataFrame(
+            columns=[
+                "customer_unique_id",
+                "recency",
+                "frequency",
+                "monetary",
+                "segment"
+            ]
+        )
 
-    Example:
+    reference_date = (
+        temp["order_purchase_timestamp"].max()
+        + pd.Timedelta(days=1)
+    )
 
-    Customer A:
-    spent = 1000
-    orders = 5
-    """
+    customer = temp.groupby("customer_unique_id").agg(
+        recency=(
+            "order_purchase_timestamp",
+            lambda x: (reference_date - x.max()).days
+        ),
+        frequency=("order_id", "nunique"),
+        monetary=("payment_value", "sum")
+    ).reset_index()
 
-    customer = df.groupby(
-        "customer_id"
-    ).agg({
+    if len(customer) == 1:
+        customer["segment"] = 0
+        return customer
 
-        # Total spend
-        "payment_value": "sum",
-
-        # Unique orders
-        "order_id": "nunique"
-
-    })
-
-    # ============================================
-    # FEATURE SCALING
-    # ============================================
-
-    """
-    Scaling ensures:
-    spending and orders
-    have equal importance.
-    """
+    features = customer[
+        ["recency", "frequency", "monetary"]
+    ]
 
     scaler = StandardScaler()
+    scaled_features = scaler.fit_transform(features)
 
-    scaled = scaler.fit_transform(customer)
-
-    # ============================================
-    # SAFE CLUSTER LOGIC
-    # ============================================
-
-    """
-    Prevents this error:
-
-    n_samples < n_clusters
-
-    Example:
-    3 customers cannot create 4 clusters.
-    """
-
-    k = min(4, len(customer))
-
-    # Extra safety
-    if k < 1:
-        k = 1
-
-    # ============================================
-    # KMEANS MODEL
-    # ============================================
-
-    """
-    n_clusters:
-    number of customer groups
-
-    random_state:
-    ensures reproducible results
-
-    n_init:
-    improves clustering stability
-    """
+    number_of_clusters = min(4, len(customer))
 
     model = KMeans(
-        n_clusters=k,
+        n_clusters=number_of_clusters,
         random_state=42,
         n_init=10
     )
 
-    # Create segment labels
     customer["segment"] = model.fit_predict(
-        scaled
+        scaled_features
     )
 
-    logger.info(
-        "Customer segmentation completed"
-    )
+    logger.info("Customer segmentation completed.")
 
     return customer

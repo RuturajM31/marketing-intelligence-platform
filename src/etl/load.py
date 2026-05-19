@@ -1,65 +1,35 @@
-# ============================================
-# LOAD LAYER (ETL - STEP 4)
-# ============================================
-
-# This file:
-# - takes cleaned dataframe
-# - stores it into SQLite database
-# - simulates real data warehouse loading
-
-from sqlalchemy import create_engine
-from src.config import DATABASE_URL
 import logging
 
-# --------------------------------------------
-# Logging setup
-# --------------------------------------------
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+from sqlalchemy import create_engine
 
-# --------------------------------------------
-# Create database engine connection
-# --------------------------------------------
+from src.config import DATABASE_URL
+
+logger = logging.getLogger(__name__)
+
 engine = create_engine(DATABASE_URL)
 
 
-# --------------------------------------------
-# MAIN FUNCTION: Load dataframe into database
-# --------------------------------------------
-def load_to_db(df, table_name):
-
+def load_to_db(df, table_name: str) -> None:
     """
-    Saves dataframe into SQLite database table
+    Loads dataframe into SQLite.
+
+    Current loading strategy:
+        full refresh
+
+    That means each run replaces the previous table.
     """
 
-    try:
+    logger.info(f"Loading data into database table: {table_name}")
 
-        logger.info(
-            f"Starting database load for table: {table_name}"
-        )
+    df.to_sql(
+        table_name,
+        con=engine,
+        if_exists="replace",
+        index=False
+    )
 
-        # ------------------------------------
-        # Save dataframe into database
-        # ------------------------------------
-        df.to_sql(
-            table_name,
-            con=engine,
-            if_exists="replace",
-            index=False
-        )
-
-        logger.info(
-            f"Successfully loaded data into table: {table_name}"
-        )
-
-        logger.info(
-            f"Rows loaded: {len(df)}"
-        )
-
-    except Exception as e:
-
-        logger.error(
-            f"Database loading failed: {str(e)}"
-        )
-
-        raise
+    logger.info(
+        f"Loaded {len(df)} rows into table: {table_name}"
+    )
+    
+    # This saves your final master dataset into SQLite.

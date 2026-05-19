@@ -1,239 +1,154 @@
-# ============================================
-# KPI ANALYTICS LAYER
-# ============================================
-
-# This file:
-# - calculates business KPIs
-# - tracks revenue performance
-# - measures customer behavior
-# - supports BI reporting
-
-import pandas as pd
 import logging
 
-# --------------------------------------------
-# Logging setup
-# --------------------------------------------
+import pandas as pd
+
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
-# ============================================
-# VALIDATION FUNCTION
-# ============================================
-
-def validate_df(df, required_columns):
+def validate_df(df: pd.DataFrame, required_columns: list[str]) -> None:
     """
-    Validates whether required columns exist
-    inside dataframe before KPI calculation
+    Checks whether required columns exist before KPI calculation.
     """
 
-    missing = [
-        col for col in required_columns
-        if col not in df.columns
+    missing_columns = [
+        column for column in required_columns
+        if column not in df.columns
     ]
 
-    if missing:
+    if missing_columns:
         raise ValueError(
-            f"Missing required columns: {missing}"
+            f"Missing required columns: {missing_columns}"
         )
 
 
-# ============================================
-# BASIC KPIs
-# ============================================
-
-# --------------------------------------------
-# TOTAL REVENUE
-# --------------------------------------------
-def total_revenue(df):
+def total_revenue(df: pd.DataFrame) -> float:
     """
-    Calculates total revenue
+    Total payment value.
+
+    Safe because transform.py creates one row per order.
     """
 
     validate_df(df, ["payment_value"])
 
-    revenue = df["payment_value"].sum()
-
-    logger.info(f"Total Revenue calculated: {revenue}")
-
-    return revenue
+    return float(df["payment_value"].sum())
 
 
-# --------------------------------------------
-# TOTAL ORDERS
-# --------------------------------------------
-def total_orders(df):
+def delivered_revenue(df: pd.DataFrame) -> float:
     """
-    Calculates total unique orders
+    Revenue from delivered orders only.
+    """
+
+    validate_df(df, ["payment_value", "order_status"])
+
+    delivered = df[df["order_status"] == "delivered"]
+
+    return float(delivered["payment_value"].sum())
+
+
+def total_orders(df: pd.DataFrame) -> int:
+    """
+    Counts unique orders.
     """
 
     validate_df(df, ["order_id"])
 
-    orders = df["order_id"].nunique()
-
-    logger.info(f"Total Orders calculated: {orders}")
-
-    return orders
+    return int(df["order_id"].nunique())
 
 
-# --------------------------------------------
-# AVERAGE ORDER VALUE
-# --------------------------------------------
-def average_order_value(df):
+def average_order_value(df: pd.DataFrame) -> float:
     """
-    Calculates average revenue per order
+    Average revenue per order.
     """
 
-    validate_df(df, ["payment_value", "order_id"])
+    revenue = total_revenue(df)
+    orders = total_orders(df)
 
-    revenue = df["payment_value"].sum()
-    orders = df["order_id"].nunique()
-
-    aov = revenue / orders if orders > 0 else 0
-
-    logger.info(f"Average Order Value calculated: {aov}")
-
-    return aov
+    return revenue / orders if orders > 0 else 0.0
 
 
-# ============================================
-# CUSTOMER KPIs
-# ============================================
-
-# --------------------------------------------
-# UNIQUE CUSTOMERS
-# --------------------------------------------
-def unique_customers(df):
+def unique_customers(df: pd.DataFrame) -> int:
     """
-    Number of unique customers
+    Counts real unique customers using customer_unique_id.
     """
 
-    validate_df(df, ["customer_id"])
+    validate_df(df, ["customer_unique_id"])
 
-    value = df["customer_id"].nunique()
-
-    logger.info(f"Unique Customers calculated: {value}")
-
-    return value
+    return int(df["customer_unique_id"].nunique())
 
 
-# --------------------------------------------
-# REVENUE PER CUSTOMER
-# --------------------------------------------
-def revenue_per_customer(df):
+def revenue_per_customer(df: pd.DataFrame) -> float:
     """
-    Average revenue generated per customer
+    Average revenue per real customer.
     """
 
-    validate_df(df, ["customer_id", "payment_value"])
+    revenue = total_revenue(df)
+    customers = unique_customers(df)
 
-    customers = df["customer_id"].nunique()
-    revenue = df["payment_value"].sum()
-
-    arpu = revenue / customers if customers > 0 else 0
-
-    logger.info(f"Revenue per Customer calculated: {arpu}")
-
-    return arpu
+    return revenue / customers if customers > 0 else 0.0
 
 
-# --------------------------------------------
-# ORDERS PER CUSTOMER
-# --------------------------------------------
-def orders_per_customer(df):
+def orders_per_customer(df: pd.DataFrame) -> float:
     """
-    Average number of orders per customer
+    Average orders per real customer.
     """
 
-    validate_df(df, ["customer_id", "order_id"])
+    validate_df(df, ["customer_unique_id", "order_id"])
 
-    orders = df["order_id"].nunique()
-    customers = df["customer_id"].nunique()
+    customer_count = df["customer_unique_id"].nunique()
+    order_count = df["order_id"].nunique()
 
-    opc = orders / customers if customers > 0 else 0
-
-    logger.info(f"Orders per Customer calculated: {opc}")
-
-    return opc
+    return order_count / customer_count if customer_count > 0 else 0.0
 
 
-# --------------------------------------------
-# REPEAT CUSTOMER RATE
-# --------------------------------------------
-def repeat_customer_rate(df):
+def repeat_customer_rate(df: pd.DataFrame) -> float:
     """
-    Percentage of customers
-    who placed more than 1 order
+    Percentage of real customers who placed more than one order.
     """
 
-    validate_df(df, ["customer_id", "order_id"])
+    validate_df(df, ["customer_unique_id", "order_id"])
 
     customer_orders = df.groupby(
-        "customer_id"
+        "customer_unique_id"
     )["order_id"].nunique()
 
-    repeat_customers = (
-        customer_orders > 1
-    ).sum()
-
+    repeat_customers = (customer_orders > 1).sum()
     total_customers = customer_orders.count()
 
-    rate = (
+    return (
         repeat_customers / total_customers * 100
-    ) if total_customers > 0 else 0
-
-    logger.info(
-        f"Repeat Customer Rate calculated: {rate}%"
+        if total_customers > 0
+        else 0.0
     )
 
-    return rate
 
-
-# ============================================
-# TIME-BASED KPIs
-# ============================================
-
-# --------------------------------------------
-# MONTHLY SALES
-# --------------------------------------------
-def monthly_sales(df):
+def late_delivery_rate(df: pd.DataFrame) -> float:
     """
-    Monthly revenue trend
+    Percentage of orders delivered later than estimated.
     """
 
-    validate_df(
-        df,
-        ["order_purchase_timestamp", "payment_value"]
-    )
+    validate_df(df, ["is_late_delivery"])
 
-    df = df.copy()
+    valid = df["is_late_delivery"].dropna()
 
-    df["order_purchase_timestamp"] = pd.to_datetime(
-        df["order_purchase_timestamp"],
-        errors="coerce"
-    )
+    if len(valid) == 0:
+        return 0.0
 
-    df["month"] = (
-        df["order_purchase_timestamp"]
-        .dt.to_period("M")
-    )
-
-    monthly = df.groupby(
-        "month"
-    )["payment_value"].sum()
-
-    logger.info("Monthly sales calculated")
-
-    return monthly
+    return float(valid.mean() * 100)
 
 
-# --------------------------------------------
-# MONTHLY REVENUE GROWTH
-# --------------------------------------------
-def monthly_revenue_growth(df):
+def average_delivery_time(df: pd.DataFrame) -> float:
     """
-    Month-over-month revenue growth %
+    Average delivery time in days.
+    """
+
+    validate_df(df, ["delivery_time_days"])
+
+    return float(df["delivery_time_days"].dropna().mean())
+
+
+def monthly_sales(df: pd.DataFrame) -> pd.Series:
+    """
+    Monthly revenue trend.
     """
 
     validate_df(
@@ -241,48 +156,41 @@ def monthly_revenue_growth(df):
         ["order_purchase_timestamp", "payment_value"]
     )
 
-    df = df.copy()
+    temp = df.copy()
 
-    df["order_purchase_timestamp"] = pd.to_datetime(
-        df["order_purchase_timestamp"],
+    temp["order_purchase_timestamp"] = pd.to_datetime(
+        temp["order_purchase_timestamp"],
         errors="coerce"
     )
 
-    df = df.dropna(
-        subset=["order_purchase_timestamp"]
-    )
+    temp = temp.dropna(subset=["order_purchase_timestamp"])
 
-    df["month"] = (
-        df["order_purchase_timestamp"]
+    temp["month"] = (
+        temp["order_purchase_timestamp"]
         .dt.to_period("M")
     )
 
-    monthly = df.groupby(
-        "month"
-    )["payment_value"].sum().sort_index()
+    return temp.groupby("month")["payment_value"].sum()
+
+
+def monthly_revenue_growth(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Month-over-month revenue growth percentage.
+    """
+
+    monthly = monthly_sales(df).sort_index()
 
     growth = monthly.pct_change() * 100
 
     result = growth.reset_index()
-
-    result.columns = [
-        "month",
-        "revenue_growth_pct"
-    ]
-
-    logger.info(
-        "Monthly revenue growth calculated"
-    )
+    result.columns = ["month", "revenue_growth_pct"]
 
     return result
 
 
-# --------------------------------------------
-# MONTHLY ORDER GROWTH
-# --------------------------------------------
-def monthly_order_growth(df):
+def monthly_order_growth(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Month-over-month order growth %
+    Month-over-month order growth percentage.
     """
 
     validate_df(
@@ -290,67 +198,58 @@ def monthly_order_growth(df):
         ["order_purchase_timestamp", "order_id"]
     )
 
-    df = df.copy()
+    temp = df.copy()
 
-    df["order_purchase_timestamp"] = pd.to_datetime(
-        df["order_purchase_timestamp"],
+    temp["order_purchase_timestamp"] = pd.to_datetime(
+        temp["order_purchase_timestamp"],
         errors="coerce"
     )
 
-    df = df.dropna(
-        subset=["order_purchase_timestamp"]
-    )
+    temp = temp.dropna(subset=["order_purchase_timestamp"])
 
-    df["month"] = (
-        df["order_purchase_timestamp"]
+    temp["month"] = (
+        temp["order_purchase_timestamp"]
         .dt.to_period("M")
     )
 
-    monthly = df.groupby(
-        "month"
-    )["order_id"].nunique().sort_index()
+    monthly_orders = (
+        temp.groupby("month")["order_id"]
+        .nunique()
+        .sort_index()
+    )
 
-    growth = monthly.pct_change() * 100
+    growth = monthly_orders.pct_change() * 100
 
     result = growth.reset_index()
-
-    result.columns = [
-        "month",
-        "order_growth_pct"
-    ]
-
-    logger.info(
-        "Monthly order growth calculated"
-    )
+    result.columns = ["month", "order_growth_pct"]
 
     return result
 
 
-# ============================================
-# MASTER KPI FUNCTION
-# ============================================
-
-def calculate_kpis(df):
+def calculate_kpis(df: pd.DataFrame) -> dict:
     """
-    Runs all important KPI calculations
+    Runs all core KPIs together.
     """
 
-    logger.info("Starting KPI calculations...")
+    logger.info("Calculating KPIs...")
 
     results = {
-
-        # Revenue KPIs
         "total_revenue": total_revenue(df),
+        "delivered_revenue": delivered_revenue(df),
         "total_orders": total_orders(df),
         "average_order_value": average_order_value(df),
-
-        # Customer KPIs
         "unique_customers": unique_customers(df),
         "revenue_per_customer": revenue_per_customer(df),
         "orders_per_customer": orders_per_customer(df),
         "repeat_customer_rate": repeat_customer_rate(df),
     }
 
-    logger.info("All KPIs calculated successfully")
+    if "is_late_delivery" in df.columns:
+        results["late_delivery_rate"] = late_delivery_rate(df)
+
+    if "delivery_time_days" in df.columns:
+        results["average_delivery_time"] = average_delivery_time(df)
+
+    logger.info("KPI calculation completed.")
 
     return results
