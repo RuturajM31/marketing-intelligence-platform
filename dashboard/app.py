@@ -22,19 +22,48 @@ That creates:
 Then run:
 
     streamlit run dashboard/app.py
+
+
+Important business wording:
+---------------------------
+The column payment_value represents recorded payment value.
+
+In the Olist dataset, canceled orders can still have payment_value.
+
+Therefore:
+
+    Gross Payment Value
+        = sum of payment_value for selected orders, regardless of status
+
+    Delivered Revenue
+        = sum of payment_value only for delivered orders
+
+This avoids showing misleading "revenue" for canceled orders.
 """
 
 # ============================================================
 # IMPORTS
 # ============================================================
 
+# sys allows us to add the project root to the Python path.
 import sys
+
+# Path helps us work with file paths safely.
 from pathlib import Path
 
+# pandas is used for dataframe operations.
 import pandas as pd
+
+# plotly.express creates charts with less code.
 import plotly.express as px
+
+# plotly.graph_objects is used for more customized charts.
 import plotly.graph_objects as go
+
+# streamlit is used to build the dashboard frontend.
 import streamlit as st
+
+# create_engine creates a connection to the SQLite database.
 from sqlalchemy import create_engine
 
 
@@ -42,19 +71,37 @@ from sqlalchemy import create_engine
 # PROJECT PATH SETUP
 # ============================================================
 
+# __file__ points to dashboard/app.py.
+# parents[1] moves one level up to the project root:
+# marketing-intelligence-platform/
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+# Add project root to Python path.
+# This allows imports like:
+# from src.analytics.kpi import calculate_kpis
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-from src.config import DATABASE_URL
+# Import KPI calculation logic from your analytics layer.
 from src.analytics.kpi import calculate_kpis
+
+
+# ============================================================
+# DATABASE PATH
+# ============================================================
+
+# main.py creates marketing.db in the project root.
+DB_PATH = PROJECT_ROOT / "marketing.db"
+
+# SQLAlchemy database URL for SQLite.
+DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 
 # ============================================================
 # PAGE CONFIG
 # ============================================================
 
+# This must be called before most Streamlit UI code.
 st.set_page_config(
     page_title="Marketing Intelligence Platform",
     page_icon="📊",
@@ -67,6 +114,7 @@ st.set_page_config(
 # PLOTLY CONFIG
 # ============================================================
 
+# Hide the Plotly toolbar for a cleaner dashboard.
 PLOTLY_CONFIG = {
     "displayModeBar": False,
     "responsive": True
@@ -74,20 +122,19 @@ PLOTLY_CONFIG = {
 
 
 # ============================================================
-# PROFESSIONAL DASHBOARD CSS
+# CUSTOM CSS
 # ============================================================
 
+# This CSS makes the dashboard look more professional.
 st.markdown(
     """
     <style>
-        /* Main app container */
         .block-container {
             padding-top: 1.4rem;
             padding-bottom: 2rem;
             max-width: 1450px;
         }
 
-        /* Header */
         .main-header {
             background: linear-gradient(135deg, #ffffff 0%, #f1f5ff 100%);
             border: 1px solid #e5e7eb;
@@ -118,7 +165,6 @@ st.markdown(
             margin-bottom: 0.9rem;
         }
 
-        /* KPI cards */
         div[data-testid="stMetric"] {
             background: white;
             border: 1px solid #e5e7eb;
@@ -138,7 +184,6 @@ st.markdown(
             font-weight: 800;
         }
 
-        /* Sidebar */
         section[data-testid="stSidebar"] {
             background-color: #ffffff;
             border-right: 1px solid #e5e7eb;
@@ -154,11 +199,6 @@ st.markdown(
             font-weight: 600;
         }
 
-        section[data-testid="stSidebar"] .stMetric {
-            background: #ffffff;
-        }
-
-        /* Data grain explanation */
         .grain-card {
             background: #eef4ff;
             border-left: 5px solid #2563eb;
@@ -170,7 +210,6 @@ st.markdown(
             box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
         }
 
-        /* Plotly chart cards */
         div[data-testid="stPlotlyChart"] {
             background: #ffffff;
             border: 1px solid #e5e7eb;
@@ -180,13 +219,11 @@ st.markdown(
             margin-bottom: 1.2rem;
         }
 
-        /* Tabs */
         button[data-baseweb="tab"] {
             font-weight: 600;
             border-radius: 10px 10px 0 0;
         }
 
-        /* Inputs */
         div[data-testid="stDateInput"] input {
             background-color: #f8fafc;
             border-radius: 12px;
@@ -216,7 +253,12 @@ st.markdown(
 
 def format_currency(value: float) -> str:
     """
-    Formats revenue values for display.
+    Formats money values for dashboard display.
+
+    Examples:
+        16010000 -> 16.01M
+        143300   -> 143.3K
+        229      -> 229
     """
 
     if value is None or pd.isna(value):
@@ -234,6 +276,9 @@ def format_currency(value: float) -> str:
 def format_number(value: float) -> str:
     """
     Formats count values.
+
+    Example:
+        99441 -> 99,441
     """
 
     if value is None or pd.isna(value):
@@ -245,6 +290,9 @@ def format_number(value: float) -> str:
 def format_percentage(value: float) -> str:
     """
     Formats percentage values.
+
+    Example:
+        3.124 -> 3.12%
     """
 
     if value is None or pd.isna(value):
@@ -253,9 +301,67 @@ def format_percentage(value: float) -> str:
     return f"{value:.2f}%"
 
 
+# ============================================================
+# COLUMN HELPERS
+# ============================================================
+
+def get_category_column(df: pd.DataFrame) -> str | None:
+    """
+    Finds the best available product category column.
+
+    Preferred:
+        main_product_category_english
+
+    Fallback:
+        main_product_category
+    """
+
+    if "main_product_category_english" in df.columns:
+        return "main_product_category_english"
+
+    if "main_product_category" in df.columns:
+        return "main_product_category"
+
+    return None
+
+
+def get_payment_column(df: pd.DataFrame) -> str | None:
+    """
+    Finds the best available payment type column.
+    """
+
+    if "primary_payment_type" in df.columns:
+        return "primary_payment_type"
+
+    if "payment_type" in df.columns:
+        return "payment_type"
+
+    return None
+
+
+def get_seller_column(df: pd.DataFrame) -> str | None:
+    """
+    Finds the best available seller column.
+    """
+
+    if "main_seller_id" in df.columns:
+        return "main_seller_id"
+
+    if "seller_id" in df.columns:
+        return "seller_id"
+
+    return None
+
+
+# ============================================================
+# CHART HELPERS
+# ============================================================
+
 def apply_chart_layout(fig, height: int = 430):
     """
-    Applies consistent BI-style layout to Plotly charts.
+    Applies consistent professional formatting to Plotly charts.
+
+    This keeps all dashboard charts visually consistent.
     """
 
     fig.update_layout(
@@ -306,7 +412,9 @@ def apply_chart_layout(fig, height: int = 430):
 
 def show_chart(fig):
     """
-    Displays Plotly chart with consistent config.
+    Displays a Plotly chart in Streamlit.
+
+    use_container_width=True makes the chart responsive.
     """
 
     st.plotly_chart(
@@ -323,8 +431,16 @@ def show_chart(fig):
 @st.cache_data(show_spinner="Loading curated master_data...")
 def load_master_data() -> pd.DataFrame:
     """
-    Loads the curated master_data table from SQLite.
+    Loads master_data from marketing.db.
+
+    This function is cached by Streamlit.
+    That means Streamlit does not reload the database on every small UI action.
     """
+
+    if not DB_PATH.exists():
+        raise FileNotFoundError(
+            f"Database not found at {DB_PATH}. Run `python main.py` first."
+        )
 
     engine = create_engine(DATABASE_URL)
 
@@ -337,7 +453,10 @@ def load_master_data() -> pd.DataFrame:
 
 def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Converts date fields into datetime.
+    Converts date columns to datetime.
+
+    Why:
+        Streamlit filters and Plotly charts need real datetime values.
     """
 
     df = df.copy()
@@ -366,10 +485,10 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 
 def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Applies dashboard filters.
+    Applies sidebar filters.
 
-    Empty dropdown selections mean "include all values".
-    This keeps the sidebar clean and avoids many selected chips.
+    Empty dropdown selections mean:
+        include all values
     """
 
     st.sidebar.title("Filters")
@@ -380,7 +499,10 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     filtered = df.copy()
 
+    # --------------------------------------------------------
     # Date filter
+    # --------------------------------------------------------
+
     if "order_purchase_timestamp" in filtered.columns:
         valid_dates = filtered["order_purchase_timestamp"].dropna()
 
@@ -405,7 +527,10 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     st.sidebar.divider()
 
+    # --------------------------------------------------------
     # Order status filter
+    # --------------------------------------------------------
+
     if "order_status" in filtered.columns:
         statuses = sorted(
             filtered["order_status"].dropna().unique()
@@ -423,7 +548,10 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
                 filtered["order_status"].isin(selected_statuses)
             ]
 
+    # --------------------------------------------------------
     # Customer state filter
+    # --------------------------------------------------------
+
     if "customer_state" in filtered.columns:
         states = sorted(
             filtered["customer_state"].dropna().unique()
@@ -441,13 +569,11 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
                 filtered["customer_state"].isin(selected_states)
             ]
 
+    # --------------------------------------------------------
     # Product category filter
-    category_column = None
+    # --------------------------------------------------------
 
-    if "main_product_category_english" in filtered.columns:
-        category_column = "main_product_category_english"
-    elif "main_product_category" in filtered.columns:
-        category_column = "main_product_category"
+    category_column = get_category_column(filtered)
 
     if category_column:
         categories = sorted(
@@ -467,84 +593,192 @@ def apply_sidebar_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     st.sidebar.divider()
 
+    # --------------------------------------------------------
+    # Sidebar summary metrics
+    # --------------------------------------------------------
+
+    filtered_orders = (
+        filtered["order_id"].nunique()
+        if "order_id" in filtered.columns
+        else len(filtered)
+    )
+
+    gross_payment_value = (
+        filtered["payment_value"].sum()
+        if "payment_value" in filtered.columns
+        else 0
+    )
+
+    if {"order_status", "payment_value"}.issubset(filtered.columns):
+        delivered_payment_value = filtered.loc[
+            filtered["order_status"] == "delivered",
+            "payment_value"
+        ].sum()
+    else:
+        delivered_payment_value = 0
+
     st.sidebar.metric(
         "Filtered orders",
-        f"{filtered['order_id'].nunique():,}"
-        if "order_id" in filtered.columns
-        else f"{len(filtered):,}"
+        f"{filtered_orders:,}"
     )
 
     st.sidebar.metric(
-        "Filtered revenue",
-        format_currency(filtered["payment_value"].sum())
-        if "payment_value" in filtered.columns
-        else "N/A"
+        "Filtered gross payment value",
+        format_currency(gross_payment_value)
+    )
+
+    st.sidebar.metric(
+        "Filtered delivered revenue",
+        format_currency(delivered_payment_value)
     )
 
     return filtered
 
 
 # ============================================================
-# KPI SECTION
+# KPI SECTIONS
 # ============================================================
 
 def show_kpi_cards(df: pd.DataFrame):
     """
-    Displays executive KPI cards.
+    Shows executive KPI cards.
+
+    These are the main business health numbers.
     """
 
     kpis = calculate_kpis(df)
 
+    # --------------------------------------------------------
+    # Row 1: financial and order KPIs
+    # --------------------------------------------------------
+
     col1, col2, col3, col4 = st.columns(4)
 
     col1.metric(
-        "Total Revenue",
+        "Gross Payment Value",
         format_currency(kpis.get("total_revenue", 0)),
-        help="Sum of payment_value"
+        help=(
+            "Sum of payment_value for selected orders, regardless of order status. "
+            "Canceled orders may still have recorded payment values."
+        )
     )
 
     col2.metric(
         "Delivered Revenue",
         format_currency(kpis.get("delivered_revenue", 0)),
-        help="Revenue from delivered orders only"
+        help="Revenue from delivered orders only."
     )
 
     col3.metric(
         "Total Orders",
         format_number(kpis.get("total_orders", 0)),
-        help="Unique order_id count"
+        help="Unique order_id count."
     )
 
     col4.metric(
-        "Average Order Value",
+        "Average Gross Order Value",
         format_currency(kpis.get("average_order_value", 0)),
-        help="Total revenue divided by total orders"
+        help="Gross payment value divided by total orders."
     )
+
+    # --------------------------------------------------------
+    # Row 2: customer and operational KPIs
+    # --------------------------------------------------------
 
     col5, col6, col7, col8 = st.columns(4)
 
     col5.metric(
         "Unique Customers",
         format_number(kpis.get("unique_customers", 0)),
-        help="Based on customer_unique_id"
+        help="Unique customers based on customer_unique_id."
     )
 
     col6.metric(
-        "Orders per Customer",
-        f"{kpis.get('orders_per_customer', 0):.2f}",
-        help="Average number of orders per unique customer"
+        "Repeat Customer Rate",
+        format_percentage(kpis.get("repeat_customer_rate", 0)),
+        help="Customers with more than one order."
     )
 
     col7.metric(
-        "Repeat Customer Rate",
-        format_percentage(kpis.get("repeat_customer_rate", 0)),
-        help="Customers with more than one order"
+        "Cancellation Rate",
+        format_percentage(kpis.get("cancellation_rate", 0)),
+        help="Canceled orders divided by total orders."
     )
 
     col8.metric(
         "Late Delivery Rate",
         format_percentage(kpis.get("late_delivery_rate", 0)),
-        help="Orders delivered later than estimated date"
+        help="Orders delivered later than estimated date."
+    )
+
+
+def show_operations_kpis(df: pd.DataFrame):
+    """
+    Shows operational KPI cards.
+
+    These KPIs explain fulfillment, cancellation, and customer experience.
+    """
+
+    kpis = calculate_kpis(df)
+
+    # --------------------------------------------------------
+    # Row 1: order status KPIs
+    # --------------------------------------------------------
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    col1.metric(
+        "Delivered Orders",
+        format_number(kpis.get("delivered_orders", 0)),
+        help="Unique delivered orders."
+    )
+
+    col2.metric(
+        "Canceled Orders",
+        format_number(kpis.get("canceled_orders", 0)),
+        help="Unique canceled orders."
+    )
+
+    col3.metric(
+        "Unavailable Orders",
+        format_number(kpis.get("unavailable_orders", 0)),
+        help="Unique unavailable orders."
+    )
+
+    col4.metric(
+        "Delivery Success Rate",
+        format_percentage(kpis.get("delivery_success_rate", 0)),
+        help="Delivered orders divided by total orders."
+    )
+
+    # --------------------------------------------------------
+    # Row 2: operational performance KPIs
+    # --------------------------------------------------------
+
+    col5, col6, col7, col8 = st.columns(4)
+
+    col5.metric(
+        "Canceled Gross Payment Value",
+        format_currency(kpis.get("canceled_gross_payment_value", 0)),
+        help="Recorded payment_value for canceled orders."
+    )
+
+    col6.metric(
+        "Average Delivery Time",
+        f"{kpis.get('average_delivery_time_days', 0):.1f} days",
+        help="Average days from purchase to delivery."
+    )
+
+    col7.metric(
+        "Average Review Score",
+        f"{kpis.get('average_review_score', 0):.2f}",
+        help="Average customer review score."
+    )
+
+    col8.metric(
+        "Orders per Customer",
+        f"{kpis.get('orders_per_customer', 0):.2f}",
+        help="Average orders per unique customer."
     )
 
 
@@ -552,62 +786,14 @@ def show_kpi_cards(df: pd.DataFrame):
 # CHARTS
 # ============================================================
 
-def chart_monthly_revenue(df: pd.DataFrame):
+def get_monthly_summary(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Monthly revenue trend.
-    """
+    Creates monthly gross payment value and order count.
 
-    required = {"order_purchase_timestamp", "payment_value"}
-
-    if not required.issubset(df.columns):
-        st.warning("Monthly revenue chart skipped.")
-        return
-
-    monthly = (
-        df.dropna(subset=["order_purchase_timestamp"])
-        .groupby(df["order_purchase_timestamp"].dt.to_period("M"))
-        .agg(
-            revenue=("payment_value", "sum"),
-            orders=("order_id", "nunique")
-        )
-        .reset_index()
-    )
-
-    monthly["month"] = monthly["order_purchase_timestamp"].astype(str)
-
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Scatter(
-            x=monthly["month"],
-            y=monthly["revenue"],
-            mode="lines+markers",
-            name="Revenue",
-            line=dict(
-                width=3,
-                color="#2563EB"
-            ),
-            marker=dict(size=7),
-            fill="tozeroy",
-            fillcolor="rgba(37, 99, 235, 0.12)",
-            hovertemplate="Month: %{x}<br>Revenue: %{y:,.0f}<extra></extra>"
-        )
-    )
-
-    fig.update_layout(
-        title="Monthly Revenue Trend",
-        xaxis_title="Month",
-        yaxis_title="Revenue"
-    )
-
-    fig = apply_chart_layout(fig, height=460)
-
-    show_chart(fig)
-
-
-def chart_revenue_vs_orders(df: pd.DataFrame):
-    """
-    Monthly revenue and order volume.
+    Output columns:
+        order_month
+        gross_payment_value
+        orders
     """
 
     required = {
@@ -617,53 +803,116 @@ def chart_revenue_vs_orders(df: pd.DataFrame):
     }
 
     if not required.issubset(df.columns):
-        st.warning("Revenue vs orders chart skipped.")
-        return
+        return pd.DataFrame()
+
+    monthly_df = df.dropna(
+        subset=["order_purchase_timestamp"]
+    ).copy()
+
+    if monthly_df.empty:
+        return pd.DataFrame()
+
+    monthly_df["order_month"] = (
+        monthly_df["order_purchase_timestamp"]
+        .dt.to_period("M")
+        .astype(str)
+    )
 
     monthly = (
-        df.dropna(subset=["order_purchase_timestamp"])
-        .groupby(df["order_purchase_timestamp"].dt.to_period("M"))
+        monthly_df
+        .groupby("order_month")
         .agg(
-            revenue=("payment_value", "sum"),
+            gross_payment_value=("payment_value", "sum"),
             orders=("order_id", "nunique")
         )
         .reset_index()
     )
 
-    monthly["month"] = monthly["order_purchase_timestamp"].astype(str)
+    return monthly
+
+
+def chart_monthly_revenue(df: pd.DataFrame):
+    """
+    Shows monthly gross payment value trend.
+    """
+
+    monthly = get_monthly_summary(df)
+
+    if monthly.empty:
+        st.warning("Monthly gross payment value chart skipped.")
+        return
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Scatter(
+            x=monthly["order_month"],
+            y=monthly["gross_payment_value"],
+            mode="lines+markers",
+            name="Gross Payment Value",
+            line=dict(width=3, color="#2563EB"),
+            marker=dict(size=7),
+            fill="tozeroy",
+            fillcolor="rgba(37, 99, 235, 0.12)",
+            hovertemplate=(
+                "Month: %{x}<br>"
+                "Gross Payment Value: %{y:,.0f}"
+                "<extra></extra>"
+            )
+        )
+    )
+
+    fig.update_layout(
+        title="Monthly Gross Payment Value Trend",
+        xaxis_title="Month",
+        yaxis_title="Gross Payment Value"
+    )
+
+    fig = apply_chart_layout(fig, height=460)
+
+    show_chart(fig)
+
+
+def chart_revenue_vs_orders(df: pd.DataFrame):
+    """
+    Shows gross payment value and order volume together.
+    """
+
+    monthly = get_monthly_summary(df)
+
+    if monthly.empty:
+        st.warning("Gross payment value vs orders chart skipped.")
+        return
 
     fig = go.Figure()
 
     fig.add_trace(
         go.Bar(
-            x=monthly["month"],
-            y=monthly["revenue"],
-            name="Revenue",
+            x=monthly["order_month"],
+            y=monthly["gross_payment_value"],
+            name="Gross Payment Value",
             marker_color="#93C5FD",
             yaxis="y1",
-            hovertemplate="Revenue: %{y:,.0f}<extra></extra>"
+            hovertemplate="Gross Payment Value: %{y:,.0f}<extra></extra>"
         )
     )
 
     fig.add_trace(
         go.Scatter(
-            x=monthly["month"],
+            x=monthly["order_month"],
             y=monthly["orders"],
             name="Orders",
             mode="lines+markers",
-            line=dict(
-                width=3,
-                color="#0F172A"
-            ),
+            line=dict(width=3, color="#0F172A"),
             yaxis="y2",
             hovertemplate="Orders: %{y:,.0f}<extra></extra>"
         )
     )
 
     fig.update_layout(
-        title="Revenue and Order Volume",
+        title="Gross Payment Value and Order Volume",
         xaxis=dict(title="Month"),
-        yaxis=dict(title="Revenue"),
+        yaxis=dict(title="Gross Payment Value"),
         yaxis2=dict(
             title="Orders",
             overlaying="y",
@@ -678,15 +927,10 @@ def chart_revenue_vs_orders(df: pd.DataFrame):
 
 def chart_top_categories(df: pd.DataFrame):
     """
-    Top categories by revenue.
+    Shows top product categories by gross payment value.
     """
 
-    category_column = None
-
-    if "main_product_category_english" in df.columns:
-        category_column = "main_product_category_english"
-    elif "main_product_category" in df.columns:
-        category_column = "main_product_category"
+    category_column = get_category_column(df)
 
     if category_column is None or "payment_value" not in df.columns:
         st.warning("Category chart skipped.")
@@ -696,21 +940,25 @@ def chart_top_categories(df: pd.DataFrame):
         df.dropna(subset=[category_column])
         .groupby(category_column)
         .agg(
-            revenue=("payment_value", "sum"),
+            gross_payment_value=("payment_value", "sum"),
             orders=("order_id", "nunique")
         )
-        .sort_values("revenue", ascending=False)
+        .sort_values("gross_payment_value", ascending=False)
         .head(12)
         .reset_index()
     )
 
+    if categories.empty:
+        st.warning("No category data available.")
+        return
+
     fig = px.bar(
-        categories.sort_values("revenue"),
-        x="revenue",
+        categories.sort_values("gross_payment_value"),
+        x="gross_payment_value",
         y=category_column,
         orientation="h",
-        title="Top Product Categories by Revenue",
-        text="revenue",
+        title="Top Product Categories by Gross Payment Value",
+        text="gross_payment_value",
         hover_data=["orders"],
         color_discrete_sequence=["#2563EB"]
     )
@@ -721,7 +969,7 @@ def chart_top_categories(df: pd.DataFrame):
     )
 
     fig.update_layout(
-        xaxis_title="Revenue",
+        xaxis_title="Gross Payment Value",
         yaxis_title="Product Category"
     )
 
@@ -732,7 +980,7 @@ def chart_top_categories(df: pd.DataFrame):
 
 def chart_order_status(df: pd.DataFrame):
     """
-    Order status share.
+    Shows order status distribution.
     """
 
     if "order_status" not in df.columns:
@@ -747,6 +995,10 @@ def chart_order_status(df: pd.DataFrame):
     )
 
     status.columns = ["order_status", "share"]
+
+    if status.empty:
+        st.warning("No order status data available.")
+        return
 
     fig = px.bar(
         status,
@@ -774,15 +1026,10 @@ def chart_order_status(df: pd.DataFrame):
 
 def chart_payment_methods(df: pd.DataFrame):
     """
-    Payment method share.
+    Shows payment method share.
     """
 
-    payment_column = None
-
-    if "primary_payment_type" in df.columns:
-        payment_column = "primary_payment_type"
-    elif "payment_type" in df.columns:
-        payment_column = "payment_type"
+    payment_column = get_payment_column(df)
 
     if payment_column is None:
         st.warning("Payment method chart skipped.")
@@ -797,6 +1044,10 @@ def chart_payment_methods(df: pd.DataFrame):
     )
 
     payment.columns = ["payment_type", "share"]
+
+    if payment.empty:
+        st.warning("No payment method data available.")
+        return
 
     fig = px.bar(
         payment,
@@ -824,7 +1075,7 @@ def chart_payment_methods(df: pd.DataFrame):
 
 def chart_customer_frequency(df: pd.DataFrame):
     """
-    Customer purchase frequency.
+    Shows number of orders per customer.
     """
 
     required = {"customer_unique_id", "order_id"}
@@ -840,6 +1091,10 @@ def chart_customer_frequency(df: pd.DataFrame):
     )
 
     customer_orders.columns = ["customer_unique_id", "orders"]
+
+    if customer_orders.empty:
+        st.warning("No customer frequency data available.")
+        return
 
     fig = px.histogram(
         customer_orders,
@@ -861,7 +1116,7 @@ def chart_customer_frequency(df: pd.DataFrame):
 
 def chart_customer_states(df: pd.DataFrame):
     """
-    Revenue by customer state.
+    Shows gross payment value by customer state.
     """
 
     required = {"customer_state", "payment_value", "order_id"}
@@ -874,19 +1129,23 @@ def chart_customer_states(df: pd.DataFrame):
         df.dropna(subset=["customer_state"])
         .groupby("customer_state")
         .agg(
-            revenue=("payment_value", "sum"),
+            gross_payment_value=("payment_value", "sum"),
             orders=("order_id", "nunique")
         )
-        .sort_values("revenue", ascending=False)
+        .sort_values("gross_payment_value", ascending=False)
         .reset_index()
     )
+
+    if states.empty:
+        st.warning("No customer state data available.")
+        return
 
     fig = px.bar(
         states,
         x="customer_state",
-        y="revenue",
-        title="Revenue by Customer State",
-        text="revenue",
+        y="gross_payment_value",
+        title="Gross Payment Value by Customer State",
+        text="gross_payment_value",
         hover_data=["orders"],
         color_discrete_sequence=["#2563EB"]
     )
@@ -898,7 +1157,7 @@ def chart_customer_states(df: pd.DataFrame):
 
     fig.update_layout(
         xaxis_title="Customer State",
-        yaxis_title="Revenue"
+        yaxis_title="Gross Payment Value"
     )
 
     fig = apply_chart_layout(fig, height=470)
@@ -908,7 +1167,7 @@ def chart_customer_states(df: pd.DataFrame):
 
 def chart_delivery_delay(df: pd.DataFrame):
     """
-    Delivery delay distribution.
+    Shows delivery delay distribution.
     """
 
     if "delivery_delay_days" not in df.columns:
@@ -949,15 +1208,10 @@ def chart_delivery_delay(df: pd.DataFrame):
 
 def chart_top_sellers(df: pd.DataFrame):
     """
-    Top sellers by revenue.
+    Shows top sellers by gross payment value.
     """
 
-    seller_column = None
-
-    if "main_seller_id" in df.columns:
-        seller_column = "main_seller_id"
-    elif "seller_id" in df.columns:
-        seller_column = "seller_id"
+    seller_column = get_seller_column(df)
 
     if seller_column is None or "payment_value" not in df.columns:
         st.warning("Seller chart skipped.")
@@ -967,21 +1221,25 @@ def chart_top_sellers(df: pd.DataFrame):
         df.dropna(subset=[seller_column])
         .groupby(seller_column)
         .agg(
-            revenue=("payment_value", "sum"),
+            gross_payment_value=("payment_value", "sum"),
             orders=("order_id", "nunique")
         )
-        .sort_values("revenue", ascending=False)
+        .sort_values("gross_payment_value", ascending=False)
         .head(12)
         .reset_index()
     )
 
+    if sellers.empty:
+        st.warning("No seller data available.")
+        return
+
     fig = px.bar(
-        sellers.sort_values("revenue"),
-        x="revenue",
+        sellers.sort_values("gross_payment_value"),
+        x="gross_payment_value",
         y=seller_column,
         orientation="h",
-        title="Top Sellers by Revenue",
-        text="revenue",
+        title="Top Sellers by Gross Payment Value",
+        text="gross_payment_value",
         hover_data=["orders"],
         color_discrete_sequence=["#2563EB"]
     )
@@ -992,7 +1250,7 @@ def chart_top_sellers(df: pd.DataFrame):
     )
 
     fig.update_layout(
-        xaxis_title="Revenue",
+        xaxis_title="Gross Payment Value",
         yaxis_title="Seller"
     )
 
@@ -1022,7 +1280,21 @@ def show_data_quality(df: pd.DataFrame):
         else None
     )
 
-    col1, col2, col3 = st.columns(3)
+    gross_payment_value = (
+        df["payment_value"].sum()
+        if "payment_value" in df.columns
+        else None
+    )
+
+    if {"order_status", "payment_value"}.issubset(df.columns):
+        delivered_revenue = df.loc[
+            df["order_status"] == "delivered",
+            "payment_value"
+        ].sum()
+    else:
+        delivered_revenue = None
+
+    col1, col2, col3, col4 = st.columns(4)
 
     col1.metric(
         "Rows",
@@ -1039,6 +1311,22 @@ def show_data_quality(df: pd.DataFrame):
         f"{missing_payments:,}" if missing_payments is not None else "N/A"
     )
 
+    col4.metric(
+        "Gross payment value",
+        format_currency(gross_payment_value) if gross_payment_value is not None else "N/A"
+    )
+
+    st.caption(
+        "Note: Gross payment value may include canceled orders with recorded payment_value. "
+        "Delivered revenue only counts delivered orders."
+    )
+
+    if delivered_revenue is not None:
+        st.metric(
+            "Delivered revenue",
+            format_currency(delivered_revenue)
+        )
+
 
 # ============================================================
 # MAIN APP
@@ -1046,7 +1334,7 @@ def show_data_quality(df: pd.DataFrame):
 
 def main():
     """
-    Runs the dashboard.
+    Runs the Streamlit dashboard.
     """
 
     st.markdown(
@@ -1088,7 +1376,10 @@ def main():
         """
         <div class="grain-card">
             <b>Data model:</b> one row represents one order.
-            Payments and items are aggregated before merging to prevent inflated revenue.
+            <b>Gross Payment Value</b> is the sum of recorded payment_value for selected orders,
+            regardless of status.
+            <b>Delivered Revenue</b> only counts delivered orders.
+            Payments and items are aggregated before merging to prevent inflated metrics.
         </div>
         """,
         unsafe_allow_html=True
@@ -1096,7 +1387,7 @@ def main():
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         [
-            "Revenue",
+            "Gross Value",
             "Customers",
             "Operations",
             "Products & Sellers",
@@ -1118,6 +1409,13 @@ def main():
             chart_customer_states(filtered_df)
 
     with tab3:
+        st.markdown(
+            '<div class="section-title">Operational Health</div>',
+            unsafe_allow_html=True
+        )
+
+        show_operations_kpis(filtered_df)
+
         col1, col2 = st.columns(2)
 
         with col1:
