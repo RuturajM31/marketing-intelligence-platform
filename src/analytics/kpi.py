@@ -11,13 +11,13 @@ KPI means Key Performance Indicator.
 These functions are used by:
 
 1. main.py
-- to calculate reports
+   - to calculate reports
 
 2. dashboard/app.py
-- to show KPI cards in Streamlit
+   - to show KPI cards in Streamlit
 
 3. tests/
-- to verify KPI logic
+   - to verify KPI logic
 
 Important business wording:
 ---------------------------
@@ -85,7 +85,7 @@ def total_revenue(df: pd.DataFrame) -> float:
     """
     Calculates Gross Payment Value.
 
-    Original name:
+    Original function name:
         total_revenue
 
     Business meaning:
@@ -98,8 +98,9 @@ def total_revenue(df: pd.DataFrame) -> float:
         This includes selected orders regardless of order_status.
         Therefore, canceled orders may be included if they have payment_value.
 
-    We keep the function name total_revenue because your existing project
-    and tests may already call this function.
+    Why keep the name total_revenue?
+        Your existing project and tests may already call this function.
+        So we keep the old function name for compatibility.
     """
 
     # Check that payment_value exists.
@@ -117,7 +118,8 @@ def delivered_revenue(df: pd.DataFrame) -> float:
         sum(payment_value where order_status == "delivered")
 
     Why this matters:
-        This is closer to recognized/real business revenue.
+        Delivered Revenue is closer to recognized/real business revenue.
+        Canceled orders are not included here.
     """
 
     # Check that required columns exist.
@@ -139,6 +141,7 @@ def canceled_gross_payment_value(df: pd.DataFrame) -> float:
 
     Why this matters:
         This explains why canceled orders can show payment value in the dashboard.
+        It should not be treated as Delivered Revenue.
     """
 
     # Check that required columns exist.
@@ -178,10 +181,10 @@ def average_order_value(df: pd.DataFrame) -> float:
         Gross Payment Value / Total Orders
 
     Important:
-        This is based on total_revenue(), which means gross payment value.
+        This is based on total_revenue(), which means Gross Payment Value.
     """
 
-    # Calculate gross payment value.
+    # Calculate Gross Payment Value.
     revenue = total_revenue(df)
 
     # Calculate unique orders.
@@ -193,13 +196,13 @@ def average_order_value(df: pd.DataFrame) -> float:
 
 def revenue_per_customer(df: pd.DataFrame) -> float:
     """
-    Calculates average gross payment value per customer.
+    Calculates average Gross Payment Value per customer.
 
     Formula:
         Gross Payment Value / Unique Customers
     """
 
-    # Calculate gross payment value.
+    # Calculate Gross Payment Value.
     revenue = total_revenue(df)
 
     # Calculate unique customers.
@@ -258,7 +261,7 @@ def repeat_customer_rate(df: pd.DataFrame) -> float:
         customers with more than 1 order / total customers * 100
 
     Why this matters:
-        Shows whether customers come back after first purchase.
+        Shows whether customers come back after their first purchase.
     """
 
     # Check required columns.
@@ -347,6 +350,9 @@ def cancellation_rate(df: pd.DataFrame) -> float:
 
     Formula:
         Canceled Orders / Total Orders * 100
+
+    Example:
+        625 canceled orders / 99,441 total orders * 100
     """
 
     # Calculate total order count.
@@ -393,25 +399,52 @@ def late_delivery_rate(df: pd.DataFrame) -> float:
     Preferred input:
         is_late_delivery
 
-    Formula:
+    Backup input:
+        delivery_delay_days
+
+    Formula using is_late_delivery:
         mean(is_late_delivery) * 100
+
+    Formula using delivery_delay_days:
+        percentage of rows where delivery_delay_days > 0
 
     Meaning:
         If is_late_delivery is True/1, order was late.
+        If delivery_delay_days > 0, order was late.
+
+    Why this safer version is useful:
+        If transform.py creates is_late_delivery, we use it.
+        If that column is missing but delivery_delay_days exists, KPI still works.
     """
 
-    # Check that is_late_delivery exists.
-    validate_df(df, ["is_late_delivery"])
+    # Best case: use is_late_delivery if it exists.
+    if "is_late_delivery" in df.columns:
 
-    # Remove missing values.
-    valid = df["is_late_delivery"].dropna()
+        # Remove missing values.
+        valid = df["is_late_delivery"].dropna()
 
-    # If no valid values exist, return 0.
-    if len(valid) == 0:
-        return 0.0
+        # If no valid values exist, return 0.
+        if len(valid) == 0:
+            return 0.0
 
-    # Boolean mean gives share of True values.
-    return float(valid.mean() * 100)
+        # Boolean mean gives share of True values.
+        return float(valid.mean() * 100)
+
+    # Backup case: use delivery_delay_days if is_late_delivery does not exist.
+    if "delivery_delay_days" in df.columns:
+
+        # Remove missing values.
+        valid = df["delivery_delay_days"].dropna()
+
+        # If no valid values exist, return 0.
+        if len(valid) == 0:
+            return 0.0
+
+        # Late delivery means delivery_delay_days is greater than 0.
+        return float((valid > 0).mean() * 100)
+
+    # If neither column exists, return 0 safely.
+    return 0.0
 
 
 def average_delivery_time(df: pd.DataFrame) -> float:
@@ -463,7 +496,7 @@ def average_review_score(df: pd.DataFrame) -> float:
 
 def monthly_sales(df: pd.DataFrame) -> pd.Series:
     """
-    Calculates monthly gross payment value.
+    Calculates monthly Gross Payment Value.
 
     Output:
         pandas Series
@@ -506,14 +539,18 @@ def monthly_sales(df: pd.DataFrame) -> pd.Series:
 
 def monthly_revenue_growth(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calculates month-over-month gross payment value growth.
+    Calculates month-over-month Gross Payment Value growth.
 
     Formula:
-        (current month revenue - previous month revenue)
-        / previous month revenue * 100
+        (current month value - previous month value)
+        / previous month value * 100
+
+    Note:
+        Function name says revenue for compatibility,
+        but the business meaning is Gross Payment Value growth.
     """
 
-    # Get monthly gross payment value and sort by month.
+    # Get monthly Gross Payment Value and sort by month.
     monthly = monthly_sales(df).sort_index()
 
     # Calculate percentage change from previous month.
@@ -614,7 +651,7 @@ def calculate_kpis(df: pd.DataFrame) -> dict:
     # Log start of KPI calculation.
     logger.info("Calculating KPIs...")
 
-    # Calculate core KPIs.
+    # Calculate all KPIs.
     results = {
         # Kept old key name for compatibility with your existing code.
         # Dashboard should display this as Gross Payment Value.
@@ -641,18 +678,13 @@ def calculate_kpis(df: pd.DataFrame) -> dict:
         "delivery_success_rate": delivery_success_rate(df),
         "canceled_gross_payment_value": canceled_gross_payment_value(df),
 
-        # Review KPI.
+        # Delivery and review KPIs.
+        "late_delivery_rate": late_delivery_rate(df),
         "average_review_score": average_review_score(df),
     }
 
-    # Add late delivery KPI only if the column exists.
-    # This keeps the function flexible.
-    if "is_late_delivery" in df.columns:
-        results["late_delivery_rate"] = late_delivery_rate(df)
-    else:
-        results["late_delivery_rate"] = 0.0
-
     # Add average delivery time only if the column exists.
+    # This keeps the function flexible for tests or partial datasets.
     if "delivery_time_days" in df.columns:
         results["average_delivery_time"] = average_delivery_time(df)
         results["average_delivery_time_days"] = average_delivery_time(df)
