@@ -46,6 +46,8 @@ This avoids showing misleading "revenue" for canceled orders.
 # ============================================================
 
 # sys allows us to add the project root to the Python path.
+import sqlite3
+import subprocess
 import sys
 
 # Path helps us work with file paths safely.
@@ -831,26 +833,115 @@ def show_chart(fig):
         },
     )
 
-def load_master_data() -> pd.DataFrame:
-    """
-    Loads master_data from marketing.db.
 
-    This function is cached by Streamlit.
-    That means Streamlit does not reload the database on every small UI action.
-    """
+def _database_is_ready() -> bool:
+    """Return True only when marketing.db has a populated master_data table.
 
-    if not DB_PATH.exists():
-        raise FileNotFoundError(
-            f"Database not found at {DB_PATH}. Run `python main.py` first."
+    The check prevents Streamlit from rebuilding the database on every rerun.
+    It also rejects incomplete SQLite files left behind by an interrupted
+    first-start pipeline.
+    """
+    if not DB_PATH.is_file():
+        return False
+
+    try:
+        with sqlite3.connect(DB_PATH) as connection:
+            table_exists = connection.execute(
+                """
+                SELECT 1
+                FROM sqlite_master
+                WHERE type = 'table' AND name = 'master_data'
+                LIMIT 1
+                """
+            ).fetchone()
+
+            if table_exists is None:
+                return False
+
+            row_count = connection.execute(
+                "SELECT COUNT(*) FROM master_data"
+            ).fetchone()[0]
+
+        return row_count > 0
+    except sqlite3.Error:
+        return False
+
+
+def _final_output_lines(output: str, limit: int = 30) -> str:
+    """Keep only the final diagnostic lines from pipeline output."""
+    lines = (output or "").splitlines()
+    return "\n".join(lines[-limit:])
+
+
+@st.cache_resource(show_spinner=False)
+def ensure_database_ready() -> bool:
+    """Create and validate marketing.db once per Streamlit server process.
+
+    Streamlit Community Cloud starts from a clean repository checkout, while
+    generated databases and raw datasets are intentionally excluded from Git.
+    When the database is absent or invalid, the existing main.py pipeline is
+    run with the same Python interpreter used by Streamlit.
+    """
+    if _database_is_ready():
+        return True
+
+    pipeline_path = PROJECT_ROOT / "main.py"
+    if not pipeline_path.is_file():
+        raise RuntimeError(f"Pipeline entry point not found: {pipeline_path}")
+
+    try:
+        result = subprocess.run(
+            [sys.executable, str(pipeline_path)],
+            cwd=PROJECT_ROOT,
+            shell=False,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=900,
+        )
+    except subprocess.TimeoutExpired as error:
+        stdout_tail = _final_output_lines(error.stdout or "")
+        stderr_tail = _final_output_lines(error.stderr or "")
+        raise RuntimeError(
+            "Analytics database preparation timed out after 900 seconds.\n"
+            f"Final stdout:\n{stdout_tail or '[empty]'}\n"
+            f"Final stderr:\n{stderr_tail or '[empty]'}"
+        ) from error
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            "Analytics database preparation failed.\n"
+            f"Return code: {result.returncode}\n"
+            f"Final stdout:\n"
+            f"{_final_output_lines(result.stdout) or '[empty]'}\n"
+            f"Final stderr:\n"
+            f"{_final_output_lines(result.stderr) or '[empty]'}"
         )
 
-    engine = create_engine(DATABASE_URL)
+    if not _database_is_ready():
+        raise RuntimeError(
+            "The data pipeline finished successfully, but marketing.db does "
+            "not contain a populated master_data table."
+        )
 
+    return True
+
+
+@st.cache_data(show_spinner=False)
+def load_master_data() -> pd.DataFrame:
+    """Load the validated master_data table without repeating startup work."""
+    with st.spinner(
+        "Preparing the analytics database. First startup may take a few minutes..."
+    ):
+        ensure_database_ready()
+
+    engine = create_engine(DATABASE_URL)
     query = "SELECT * FROM master_data"
 
-    df = pd.read_sql(query, engine)
-
-    return df
+    try:
+        return pd.read_sql(query, engine)
+    finally:
+        engine.dispose()
 
 
 def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -5007,7 +5098,7 @@ def main():
         df = load_master_data()
     except Exception as error:
         st.error("Could not load `master_data` from `marketing.db`.")
-        st.info("Run `python main.py` first from the project root.")
+        st.info("The analytics database could not be prepared automatically.")
         st.exception(error)
         return
 
